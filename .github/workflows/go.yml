@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: install dependencies
         run: sudo apt update && sudo apt install libsnmp-dev libc-dev && sudo apt install build-essential
+      - name: check version
+        run: gcc --version
       - uses: actions/checkout@v2
       - name: install dependencies
         run: sudo apt update && sudo apt install build-essential libnetfilter-queue-dev libnfnetlink-dev
