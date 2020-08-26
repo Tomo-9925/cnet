@@ -11,6 +11,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - name: install dependencies
+      - run: |
+          apt install build-essential
       - uses: actions/checkout@v2
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v1
