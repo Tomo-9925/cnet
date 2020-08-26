@@ -145,7 +145,7 @@ func main() {
 				logrus.WithFields(communicationField).Warning("Dropped an undefined communication")
 				continue
 			}
-			p.SetVerdict(netfileter.NF_ACCEPT)
+			p.SetVerdict(netfilter.NF_ACCEPT)
 			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
 		}
 	}
