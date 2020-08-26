@@ -22,7 +22,6 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
-	ruleNum   uint   = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -55,7 +54,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.InsertNFQueueRule(chainName, ruleNum, protocol, queueNum)
+	err = network.AppendNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -85,7 +84,7 @@ func init() {
 
 func deinit() {
 	if !debug {
-		err = network.DeleteNFQueueRule(chainName, ruleNum, protocol, queueNum)
+		err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
 		if err != nil {
 			logrus.Errorln(err)
 		}
@@ -145,7 +144,7 @@ func main() {
 				logrus.WithFields(communicationField).Warning("Dropped an undefined communication")
 				continue
 			}
-			p.SetVerdict(netfileter.NF_ACCEPT)
+			p.SetVerdict(netfilter.NF_ACCEPT)
 			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
 		}
 	}
