@@ -124,7 +124,7 @@ func main() {
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("packet received")
 			var (
-				targetSocket    *proc.Socket
+				targetSocket          *proc.Socket
 				communicatedContainer *container.Container
 				communicatedProcess   *proc.Process
 			)
@@ -157,7 +157,7 @@ func main() {
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)
-			logrus.WithFields(communicationField).Debug("packet accepted")
+			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
 		}
 	}
 }
