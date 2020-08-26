@@ -22,7 +22,6 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
-	ruleNum   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -55,7 +54,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
+	err = network.AppendNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
