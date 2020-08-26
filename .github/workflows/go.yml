@@ -34,6 +34,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - name: install dependencies
         run: sudo apt update && sudo apt install libsnmp-dev libc-dev && sudo apt install build-essential
       - name: check version
