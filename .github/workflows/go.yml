@@ -18,7 +18,7 @@ jobs:
       - name: check version
         run: gcc --version
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v1
+        uses: golangci/golangci-lint-action@v1.2.1
         with:
           version: v1.26
           args: --enable=golint,gosec,prealloc,gocognit
