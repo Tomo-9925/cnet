@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: install dependencies
-        run: sudo apt update && sudo apt install libsnmp-dev libc-dev && sudo apt install build-essential && sudo apt-get install libnetfilter-queue-dev
+        run: sudo apt update && sudo apt install -y libsnmp-dev libc-dev build-essential libnetfilter-queue-dev　libnfnetlink-dev
       - name: Set up Go 1.14.7
         uses: actions/setup-go@v2
         with:
