@@ -11,10 +11,10 @@ jobs:
       - name: install dependencies
         run: sudo apt update && sudo apt install libsnmp-dev libc-dev && sudo apt install build-essential
       - name: Set up Go 1.14.7
-          uses: actions/setup-go@v2
-          with:
-            go-version: ^1.14.7
-          id: go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.14.7
+        id: go
       - name: check version
         run: gcc --version
       - name: golangci-lint
