@@ -20,8 +20,8 @@ func AppendNFQueueRule(chainName string, protocol string, queueNum uint16) error
 		"protocol":  protocol,
 		"queueNum":  queueNum,
 	}
-	if ExistNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("NFQueue is already added")
+	if ExistsNFQueueRule(chainName, protocol, queueNum) {
+		logrus.WithFields(argFields).Debug("NFQueue is exists")
 		return nil
 	}
 	out, err := exec.Command(
@@ -30,11 +30,11 @@ func AppendNFQueueRule(chainName string, protocol string, queueNum uint16) error
 		"-p", protocol,
 		"-j", jumpTarget,
 		"--queue-num", strconv.Itoa(int(queueNum)),
-	).Output()
+	).CombinedOutput()
 	if err != nil {
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("NFQueue is added")
+	logrus.WithFields(argFields).Debug("NFQueue is exists")
 	return nil
 }
 
@@ -45,8 +45,8 @@ func DeleteNFQueueRule(chainName string, protocol string, queueNum uint16) error
 		"protocol":  protocol,
 		"queueNum":  queueNum,
 	}
-	if !ExistNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("NFQueue is already deleted")
+	if !ExistsNFQueueRule(chainName, protocol, queueNum) {
+		logrus.WithFields(argFields).Debug("NFQueue is not exists")
 		return nil
 	}
 	out, err := exec.Command(
@@ -55,7 +55,7 @@ func DeleteNFQueueRule(chainName string, protocol string, queueNum uint16) error
 		"-p", protocol,
 		"-j", jumpTarget,
 		"--queue-num", strconv.Itoa(int(queueNum)),
-	).Output()
+	).CombinedOutput()
 	if err != nil {
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
@@ -63,8 +63,8 @@ func DeleteNFQueueRule(chainName string, protocol string, queueNum uint16) error
 	return nil
 }
 
-// ExistNFQueueRule reports whether NFQueue rule is existed.
-func ExistNFQueueRule(chainName string, protocol string, queueNum uint16) bool {
+// ExistsNFQueueRule reports whether NFQueue rule is existed.
+func ExistsNFQueueRule(chainName string, protocol string, queueNum uint16) bool {
 	err := exec.Command(
 		"iptables",
 		"-C", chainName,

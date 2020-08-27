@@ -17,14 +17,14 @@ func TestNFQueueRule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !network.ExistNFQueueRule(chainName, protocol, queueNum) {
+	if !network.ExistsNFQueueRule(chainName, protocol, queueNum) {
 		t.Fatal("Couldn't append NFQueue rule")
 	}
 	err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if network.ExistNFQueueRule(chainName, protocol, queueNum) {
+	if network.ExistsNFQueueRule(chainName, protocol, queueNum) {
 		t.Fatal("Couldn't delete NFQueue rule")
 	}
 }
