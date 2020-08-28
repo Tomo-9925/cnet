@@ -17,7 +17,7 @@ jobs:
       - name: install dependencies
         run: |
           sudo apt update && sudo apt install build-essential libnetfilter-queue-dev libnfnetlink-dev
-          go mod install
+          go mod download
 
       - name: Test
         run: sudo go test -v ./...
