@@ -96,18 +96,21 @@ func deinit() {
 }
 
 func main() {
-	defer deinit()
-
-	// Hook SIGINT event
+	// Hook signal
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	// Hook NFQueue
-	queue, err := netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
+	var queue *netfilter.NFQueue
+	queue, err = netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
 	if err != nil {
+		deinit()
 		logrus.Fatalln(err)
 	}
-	defer queue.Close()
+	defer func() {
+		queue.Close()
+		deinit()
+	}()
 	packets := queue.GetPackets()
 
 	// TODO: Container start-up detection and file change detection.
@@ -117,21 +120,30 @@ func main() {
 		select {
 		case s := <-sig:
 			logrus.WithField("signal", s).Info("Signal received")
-			deinit()
 			return
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("Packet received")
-			pSocket := proc.PtoS(&p.Packet)
+			var (
+				pSocket    *proc.Socket
+				pContainer *container.Container
+				pProcess   *proc.Process
+			)
+			pSocket, pContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
+			if err != nil {
+				p.SetVerdict(netfilter.NF_DROP)
+				logrus.WithField("packet", p).Warn(err)
+				continue
+			}
 			// OPTIMIZE: Maybe we should memoization.
 			if !pSocket.IsSupportProtocol() {
 				p.SetVerdict(netfilter.NF_ACCEPT)
 				logrus.WithField("socket", pSocket).Info("Packet accepted")
 				continue
 			}
-			pProcess, pContainer, err := proc.IdentifyProcessOfContainer(pSocket, containers)
+			pProcess, err = proc.IdentifyProcessOfContainer(pSocket, pContainer)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("socket", pSocket).Info(err)
+				logrus.WithField("socket", pSocket).Warn(err)
 				continue
 			}
 			communicationField := logrus.Fields{
@@ -141,7 +153,7 @@ func main() {
 			}
 			if !policies.IsDefined(pContainer, pProcess, pSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithFields(communicationField).Warning("Dropped an undefined communication")
+				logrus.WithFields(communicationField).Warn("Dropped an undefined communication")
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)

@@ -10,5 +10,5 @@ type Process struct {
 	Inode      uint64
 }
 
-// IdentifyProcessOfContainer returns Process of container and the Container from Socket.
-func IdentifyProcessOfContainer(pSocket *Socket, containers []*container.Container) (*Process, *container.Container, error)
+// IdentifyProcessOfContainer returns Process of container from Socket.
+func IdentifyProcessOfContainer(pSocket *Socket, pContainer *container.Container) (*Process, error)
