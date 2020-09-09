@@ -140,7 +140,7 @@ func main() {
 				logrus.WithField("socket", pSocket).Info("Packet accepted")
 				continue
 			}
-			pProcess, err = proc.IdentifyProcessOfContainer(pSocket, pContainer)
+			pProcess, err = proc.IdentifyProcessOfContainer(pSocket, pContainer, &p.Packet)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithField("socket", pSocket).Warn(err)

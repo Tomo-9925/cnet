@@ -44,14 +44,12 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 		if ip.SrcIP.Equal(container.IP) {
 			pDirection = out
 			pContainer = container
-			pSocket.LocalIP = ip.SrcIP
-			pSocket.RemoteIP = ip.DstIP
+			pSocket.LocalIP, pSocket.RemoteIP = ip.SrcIP, ip.DstIP
 			break
 		} else if ip.DstIP.Equal(container.IP) {
 			pDirection = in
 			pContainer = container
-			pSocket.LocalIP = ip.DstIP
-			pSocket.RemoteIP = ip.SrcIP
+			pSocket.LocalIP, pSocket.RemoteIP = ip.DstIP, ip.SrcIP
 			break
 		}
 	}
@@ -66,21 +64,17 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 		tcp, _ := (*packet).Layer(layers.LayerTypeTCP).(*layers.TCP)
 		switch pDirection {
 		case out:
-			pSocket.LocalPort = uint16(tcp.SrcPort)
-			pSocket.RemotePort = uint16(tcp.DstPort)
+			pSocket.LocalPort, pSocket.RemotePort = uint16(tcp.SrcPort), uint16(tcp.DstPort)
 		case in:
-			pSocket.LocalPort = uint16(tcp.DstPort)
-			pSocket.RemotePort = uint16(tcp.SrcPort)
+			pSocket.LocalPort, pSocket.RemotePort = uint16(tcp.DstPort), uint16(tcp.SrcPort)
 		}
 	case layers.LayerTypeUDP:
 		udp, _ := (*packet).Layer(layers.LayerTypeUDP).(*layers.UDP)
 		switch pDirection {
 		case out:
-			pSocket.LocalPort = uint16(udp.SrcPort)
-			pSocket.RemotePort = uint16(udp.DstPort)
+			pSocket.LocalPort, pSocket.RemotePort = uint16(udp.SrcPort), uint16(udp.DstPort)
 		case in:
-			pSocket.LocalPort = uint16(udp.DstPort)
-			pSocket.RemotePort = uint16(udp.SrcPort)
+			pSocket.LocalPort, pSocket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
 		}
 	}
 
