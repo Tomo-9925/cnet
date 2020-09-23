@@ -13,6 +13,7 @@ type RunNotifyApi struct {
 	errCh  chan error
 }
 
+// NewRunNotifyApi return the RunNotifyApi
 func NewRunNotifyApi(runCh chan string, killCh chan string, errCh chan error) (*RunNotifyApi, error) {
 	runNotifyApi := RunNotifyApi{Fs: nil, runCh: runCh, killCh: killCh, errCh: errCh}
 	fs, err := fsnotify.NewWatcher()
@@ -33,6 +34,7 @@ func (runNotifyApi *RunNotifyApi) addContainerRunMetrics() error {
 	return nil
 }
 
+// Start starts monitoring
 func (runNotifyApi *RunNotifyApi) Start() {
 	defer close(runNotifyApi.runCh)
 	defer close(runNotifyApi.killCh)

@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/tomo-9925/cnet/pkg/runnotify"
 
@@ -113,9 +112,6 @@ func main() {
 	defer queue.Close()
 	packets := queue.GetPackets()
 
-	// TODO: Container start-up detection and file change detection.
-	// 全体報告会の資料添削のときに，以前のシステム構成のことを思い出しました…
-
 	runCh := make(chan string)
 	killCh := make(chan string)
 	runErrCh := make(chan error)
@@ -124,7 +120,6 @@ func main() {
 	if err != nil {
 		logrus.Fatalln(err)
 	}
-	nowTime := time.Now()
 	go runNotifyApi.Start()
 
 	for {
@@ -135,10 +130,23 @@ func main() {
 			return
 		case cid := <-runCh:
 			logrus.WithField("RUN cid:", cid).Info("Container start")
-			//TODO コンテナ監視に必要な初期化処理
+
+			//Include newly launched containers in the monitoring
+			container, err := container.GetDockerContainerInformation(cid)
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+			containers = append(containers, container)
+
+			// Reload security policy data
+			policies, err = policy.ParseSecurityPolicy(policyPath, containers)
+			if err != nil {
+				logrus.Fatalln(err)
+			}
 		case cid := <-killCh:
 			logrus.WithField("RUN cid:", cid).Info("Container stop")
-			//TODO 該当コンテナ開始に使っていた処理の停止
+			//Removing finished containers from monitoring
+			container.RemoveContainer(containers, cid)
 		case cid := <-runErrCh:
 			logrus.WithField("RUN cid:", cid).Info("An error occurred when starting the container")
 		case p := <-packets:
