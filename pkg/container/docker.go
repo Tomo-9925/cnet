@@ -15,11 +15,11 @@ func GetDockerContainerInformations() ([]*Container, error) {
 	var containerInformations []*Container
 
 	// Initialize client for the Docker Engine API
-	dockerCli, err := client.NewEnvClient()
+	cli, err := client.NewEnvClient()
 	if err != nil {
 		return nil, err
 	}
-
+	dockerCli = cli
 	// Get container list
 	containers, err := dockerCli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
@@ -28,16 +28,11 @@ func GetDockerContainerInformations() ([]*Container, error) {
 
 	// Get container informations
 	for _, container := range containers {
-		inspect, err := dockerCli.ContainerInspect(context.Background(), container.ID)
+		containerInformation, err := GetDockerContainerInformation(container.ID)
 		if err != nil {
 			return nil, err
 		}
-		containerInformations = append(containerInformations, &Container{
-			ID:   inspect.ID,
-			IP:   net.ParseIP(inspect.NetworkSettings.IPAddress),
-			Name: inspect.Name,
-			Pid:  inspect.State.Pid,
-		})
+		containerInformations = append(containerInformations, containerInformation)
 	}
 
 	return containerInformations, nil
@@ -45,7 +40,6 @@ func GetDockerContainerInformations() ([]*Container, error) {
 
 // GetDockerContainerInformation return the information of Docker container.
 func GetDockerContainerInformation(containerID string) (*Container, error) {
-	var containerInformation *Container
 
 	// Get container information
 	inspect, err := dockerCli.ContainerInspect(context.Background(), containerID)
@@ -53,14 +47,12 @@ func GetDockerContainerInformation(containerID string) (*Container, error) {
 		return nil, err
 	}
 
-	containerInformation = &Container{
+	return &Container{
 		ID:   inspect.ID,
 		IP:   net.ParseIP(inspect.NetworkSettings.IPAddress),
 		Name: inspect.Name,
 		Pid:  inspect.State.Pid,
-	}
-
-	return containerInformation, nil
+	}, nil
 }
 
 func RemoveContainerFromSlice(containers []*Container, cid string) []*Container {
