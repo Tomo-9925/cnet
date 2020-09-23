@@ -4,6 +4,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"github.com/tomo-9925/cnet/pkg/runnotify"
 
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
@@ -113,12 +116,31 @@ func main() {
 	// TODO: Container start-up detection and file change detection.
 	// 全体報告会の資料添削のときに，以前のシステム構成のことを思い出しました…
 
+	runCh := make(chan string)
+	killCh := make(chan string)
+	runErrCh := make(chan error)
+
+	runNotifyApi, err := runnotify.NewRunNotifyApi(runCh, killCh, runErrCh)
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+	nowTime := time.Now()
+	go runNotifyApi.Start()
+
 	for {
 		select {
 		case s := <-sig:
 			logrus.WithField("signal", s).Info("Signal received")
 			deinit()
 			return
+		case cid := <-runCh:
+			logrus.WithField("RUN cid:", cid).Info("Container start")
+			//TODO コンテナ監視に必要な初期化処理
+		case cid := <-killCh:
+			logrus.WithField("RUN cid:", cid).Info("Container stop")
+			//TODO 該当コンテナ開始に使っていた処理の停止
+		case cid := <-runErrCh:
+			logrus.WithField("RUN cid:", cid).Info("An error occurred when starting the container")
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("Packet received")
 			pSocket := proc.PtoS(&p.Packet)
