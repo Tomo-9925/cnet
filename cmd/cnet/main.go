@@ -146,7 +146,7 @@ func main() {
 		case cid := <-killCh:
 			logrus.WithField("RUN cid:", cid).Info("Container stop")
 			//Removing finished containers from monitoring
-			container.RemoveContainer(containers, cid)
+			container.RemoveContainerFromSlice(containers, cid)
 		case cid := <-runErrCh:
 			logrus.WithField("RUN cid:", cid).Info("An error occurred when starting the container")
 		case p := <-packets:
