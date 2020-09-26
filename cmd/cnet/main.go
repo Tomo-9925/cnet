@@ -22,6 +22,7 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
+	ruleNum   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -54,7 +55,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.AppendNFQueueRule(chainName, protocol, queueNum)
+	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -96,6 +97,8 @@ func deinit() {
 }
 
 func main() {
+	defer deinit()
+
 	// Hook signal
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
@@ -107,10 +110,7 @@ func main() {
 		deinit()
 		logrus.Fatalln(err)
 	}
-	defer func() {
-		queue.Close()
-		deinit()
-	}()
+	defer queue.Close()
 	packets := queue.GetPackets()
 
 	// TODO: Container start-up detection and file change detection.
