@@ -18,6 +18,7 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) err
 	argFields := logrus.Fields{
 		"chainName": chainName,
 		"protocol":  protocol,
+		"ruleNum": ruleNum,
 		"queueNum":  queueNum,
 	}
 	if ExistsNFQueueRule(chainName, protocol, queueNum) {
@@ -26,7 +27,7 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) err
 	}
 	out, err := exec.Command(
 		"iptables",
-		"-A", chainName,
+		"-I", chainName, strconv.Itoa(int(ruleNum)),
 		"-p", protocol,
 		"-j", jumpTarget,
 		"--queue-num", strconv.Itoa(int(queueNum)),
@@ -34,7 +35,7 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) err
 	if err != nil {
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("NFQueue is exists")
+	logrus.WithFields(argFields).Debug("NFQueue is inserted")
 	return nil
 }
 
