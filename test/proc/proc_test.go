@@ -18,7 +18,7 @@ import (
 var (
 	// Docker Engine API settings
 	ctx context.Context = context.Background()
-	netcatContainerName string = "cnet_curl_test"
+	netcatContainerName string = "cnet_netcat_test"
 	netcatImage string = "docker.io/subfuzion/netcat"
 	netcatContainerConfig *container.Config = types.ContainerCreateConfig{
 			Name: netcatContainerName,
