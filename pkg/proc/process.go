@@ -51,11 +51,11 @@ func SearchInodeFromNetOfPid(pSocket *Socket, pid int) (uint64, error) {
 	netFilePath := ""
 	switch pSocket.Protocol {
 	case layers.LayerTypeTCP:
-		netFilePath = filepath.Join(procPath, "net", strconv.Itoa(pid), "tcp")
+		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp")
 	case layers.LayerTypeUDP:
-		netFilePath = filepath.Join(procPath, "net", strconv.Itoa(pid), "udp")
+		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "udp")
 	// case layers.LayerTypeICMPv4:
-	// 	netFilePath = filepath.Join(procPath, "net", strconv.Itoa(pid), "raw")
+	// 	netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
 	default:
 		return 0, errors.New("File path not defined")
 	}
@@ -134,7 +134,7 @@ func SearchProcessOfContainerFromInode(pContainer *container.Container, inode ui
 				if err != nil {
 					return nil, err
 				}
-				exePath := filepath.Join(processDirPath, "exec")
+				exePath := filepath.Join(processDirPath, "exe")
 				processPath, err := os.Readlink(exePath)
 				if err != nil {
 					return nil, err
