@@ -3,35 +3,25 @@ package runnotify
 import (
 	"path/filepath"
 
-	"github.com/fsnotify/fsnotify"
+	"github.com/tomo-9925/cnet/pkg/container"
+
+	"github.com/docker/docker/api/types/events"
 )
 
 type RunNotifyApi struct {
-	Fs     *fsnotify.Watcher
-	runCh  chan string
-	killCh chan string
-	errCh  chan error
+	Messages <-chan events.Message
+	Err      <-chan error
+	runCh    chan string
+	killCh   chan string
+	errCh    chan error
 }
 
 // NewRunNotifyApi return the RunNotifyApi
 func NewRunNotifyApi(runCh chan string, killCh chan string, errCh chan error) (*RunNotifyApi, error) {
-	runNotifyApi := RunNotifyApi{Fs: nil, runCh: runCh, killCh: killCh, errCh: errCh}
-	fs, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
-	}
-	runNotifyApi.Fs = fs
-	if err := runNotifyApi.addContainerRunMetrics(); err != nil {
-		return nil, err
-	}
-	return &runNotifyApi, nil
-}
+	runNotifyApi := RunNotifyApi{Messages: nil, runCh: runCh, killCh: killCh, errCh: errCh}
+	runNotifyApi.Messages, runNotifyApi.Err = container.NewWatcher()
 
-func (runNotifyApi *RunNotifyApi) addContainerRunMetrics() error {
-	if err := runNotifyApi.Fs.Add(runmetrics); err != nil {
-		return err
-	}
-	return nil
+	return &runNotifyApi, nil
 }
 
 // Start starts monitoring
@@ -44,18 +34,18 @@ func (runNotifyApi *RunNotifyApi) Start() {
 	lastKill := ""
 	for {
 		select {
-		case event := <-runNotifyApi.Fs.Events:
+		case msg := <-runNotifyApi.Messages:
 			switch {
-			case event.Op&fsnotify.Create == fsnotify.Create:
-				cid := filepath.Base(event.Name)
+			case msg.Type == "create":
+				cid := filepath.Base(msg.ID)
 				if lastRun == cid {
 					continue
 				}
 				runNotifyApi.runCh <- cid
 				lastRun = cid
 
-			case event.Op&fsnotify.Remove == fsnotify.Remove:
-				cid := filepath.Base(event.Name)
+			case msg.Type == "destory":
+				cid := filepath.Base(msg.ID)
 				if cid == lastKill {
 					continue
 				}
@@ -63,7 +53,7 @@ func (runNotifyApi *RunNotifyApi) Start() {
 				runNotifyApi.killCh <- cid
 				lastKill = cid
 			}
-		case err := <-runNotifyApi.Fs.Errors:
+		case err := <-runNotifyApi.Err:
 			runNotifyApi.errCh <- err
 		}
 	}

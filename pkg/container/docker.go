@@ -4,6 +4,10 @@ import (
 	"context"
 	"net"
 
+	"github.com/docker/docker/api/types/filters"
+
+	"github.com/docker/docker/api/types/events"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
@@ -63,4 +67,16 @@ func RemoveContainerFromSlice(containers []*Container, cid string) []*Container 
 		}
 	}
 	return result
+}
+
+func NewWatcher() (<-chan events.Message, <-chan error) {
+	filter := filters.NewArgs()
+	filter.Add("type", "container")
+	filter.Add("event", "create")
+	filter.Add("event", "destroy")
+
+	msg, err := dockerCli.Events(context.Background(), types.EventsOptions{
+		Filters: filter,
+	})
+	return msg, err
 }
