@@ -35,7 +35,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	// This program only supports IPv4
 	ipLayer := (*packet).Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
-		return nil, nil, errors.New("Packet not contained IPv4 layer")
+		return nil, nil, errors.New("packet not contained ipv4 layer")
 	}
 	ip, _ := ipLayer.(*layers.IPv4)
 
@@ -54,7 +54,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 		}
 	}
 	if pContainer == nil {
-		return nil, nil, errors.New("Source of communication not identified")
+		return nil, nil, errors.New("source of communication not identified")
 	}
 
 	// Check the protocol inside network layer

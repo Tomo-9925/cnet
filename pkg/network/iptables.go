@@ -22,7 +22,7 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) err
 		"queueNum":  queueNum,
 	}
 	if ExistsNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("NFQueue is exists")
+		logrus.WithFields(argFields).Debug("nfqueue is exists")
 		return nil
 	}
 	out, err := exec.Command(
@@ -35,7 +35,7 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) err
 	if err != nil {
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("NFQueue is inserted")
+	logrus.WithFields(argFields).Debug("nfqueue is inserted")
 	return nil
 }
 
@@ -47,7 +47,7 @@ func DeleteNFQueueRule(chainName, protocol string, queueNum uint16) error {
 		"queueNum":  queueNum,
 	}
 	if !ExistsNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("NFQueue is not exists")
+		logrus.WithFields(argFields).Debug("nfqueue is not exists")
 		return nil
 	}
 	out, err := exec.Command(
@@ -60,7 +60,7 @@ func DeleteNFQueueRule(chainName, protocol string, queueNum uint16) error {
 	if err != nil {
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("NFQueue is deleted")
+	logrus.WithFields(argFields).Debug("nfqueue is deleted")
 	return nil
 }
 

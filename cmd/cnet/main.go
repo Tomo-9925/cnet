@@ -22,7 +22,7 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
-	ruleNum   uint16 = 1
+	insertPos   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -55,7 +55,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
+	err = network.InsertNFQueueRule(chainName, protocol, insertPos, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -119,10 +119,10 @@ func main() {
 	for {
 		select {
 		case s := <-sig:
-			logrus.WithField("signal", s).Info("Signal received")
+			logrus.WithField("signal", s).Info("signal received")
 			return
 		case p := <-packets:
-			logrus.WithField("packet", p).Debug("Packet received")
+			logrus.WithField("packet", p).Debug("packet received")
 			var (
 				pSocket    *proc.Socket
 				pContainer *container.Container
@@ -137,7 +137,7 @@ func main() {
 			// OPTIMIZE: Maybe we should memoization.
 			if !pSocket.IsSupportProtocol() {
 				p.SetVerdict(netfilter.NF_ACCEPT)
-				logrus.WithField("socket", pSocket).Info("Packet accepted")
+				logrus.WithField("socket", pSocket).Info("packet accepted")
 				continue
 			}
 			pProcess, err = proc.IdentifyProcessOfContainer(pSocket, pContainer, &p.Packet)
@@ -153,11 +153,11 @@ func main() {
 			}
 			if !policies.IsDefined(pContainer, pProcess, pSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithFields(communicationField).Warn("Dropped an undefined communication")
+				logrus.WithFields(communicationField).Warn("packet dropped")
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)
-			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
+			logrus.WithFields(communicationField).Debug("packet accepted")
 		}
 	}
 }

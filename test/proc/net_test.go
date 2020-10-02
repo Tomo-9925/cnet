@@ -1,4 +1,4 @@
-package net_test
+package proc_test
 
 import (
 	"encoding/binary"
@@ -13,6 +13,6 @@ func TestIPtoa(t *testing.T) {
 	testIPStr := proc.IPtoa(testIP)
 	if (proc.HostByteOrder == binary.LittleEndian && testIPStr != "010BA8C0") ||
 	(proc.HostByteOrder == binary.BigEndian && testIPStr != "C0A80B01") {
-		t.Fatal("Couldn't convert IP address")
+		t.Fatal("couldn't convert ip address")
 	}
 }

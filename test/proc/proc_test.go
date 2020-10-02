@@ -1,4 +1,4 @@
-package process_test
+package proc_test
 
 import (
 	"context"
@@ -96,10 +96,10 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !pSocket.LocalIP.Equal(pContainer.IP) {
-		t.Error("Local IP address not located correctly")
+		t.Error("local ip address not located correctly")
 	}
 	if pSocket.RemotePort != 80 {
-		t.Error("Remote Port number not get correctly")
+		t.Error("remote port number not get correctly")
 	}
 
 	// Get Process of container information
@@ -108,9 +108,9 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 		t.Fatal(err)
 	}
 	if pProcess.Executable != "nc" {
-		t.Error("Executable not get correctly")
+		t.Error("executable not get correctly")
 	}
 	if pProcess.Path != "/usr/bin/nc" {
-		t.Error("Path not get correctly")
+		t.Error("path not get correctly")
 	}
 }

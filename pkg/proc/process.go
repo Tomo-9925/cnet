@@ -39,7 +39,7 @@ func IdentifyProcessOfContainer(pSocket *Socket, pContainer *container.Container
 			return nil, err
 		}
 	default:
-		return nil, errors.New("The protocol not supported")
+		return nil, errors.New("the protocol not supported")
 	}
 
 	return pProcess, nil
@@ -57,7 +57,7 @@ func SearchInodeFromNetOfPid(pSocket *Socket, pid int) (uint64, error) {
 	// case layers.LayerTypeICMPv4:
 	// 	netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
 	default:
-		return 0, errors.New("File path not defined")
+		return 0, errors.New("file path not defined")
 	}
 
 	// Read all file
@@ -155,7 +155,7 @@ func SearchProcessOfContainerFromInode(pContainer *container.Container, inode ui
 		pids.Push(childrenPIDs...)
 	}
 
-	return nil, errors.New("Process not found")
+	return nil, errors.New("process not found")
 }
 
 // GetPPID gets the PPID from stat of proc filesystem.
@@ -174,7 +174,7 @@ func GetPPID(pid int) (int, error) {
 		}
 	}
 
-	return 0, errors.New("The stat file not scanned")
+	return 0, errors.New("the stat file not scanned")
 }
 
 // GetChildrenPIDs gets children PIDs from children of proc filesystem.

@@ -23,7 +23,7 @@ func init() {
 	case [2]byte{0xAB, 0xCD}:
 		HostByteOrder = binary.BigEndian
 	default:
-		logrus.Fatalln("Could not determine native endianness.")
+		logrus.Fatalln("native endianness not determined")
 	}
 }
 
