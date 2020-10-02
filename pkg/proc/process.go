@@ -25,16 +25,16 @@ type Process struct {
 }
 
 // IdentifyProcessOfContainer returns Process of container from Socket and Container and Packet.
-func IdentifyProcessOfContainer(pSocket *Socket, pContainer *container.Container, packet *gopacket.Packet) (*Process, error) {
-	var pProcess *Process
+func IdentifyProcessOfContainer(targetSocket *Socket, targetContainer *container.Container, packet *gopacket.Packet) (*Process, error) {
+	var targetProcess *Process
 
-	switch pSocket.Protocol {
+	switch targetSocket.Protocol {
 	case layers.LayerTypeTCP, layers.LayerTypeUDP:
-		inode, err := SearchInodeFromNetOfPid(pSocket, pContainer.Pid)
+		inode, err := SearchInodeFromNetOfPid(targetSocket, targetContainer.Pid)
 		if err != nil {
 			return nil, err
 		}
-		pProcess, err = SearchProcessOfContainerFromInode(pContainer, inode)
+		targetProcess, err = SearchProcessOfContainerFromInode(targetContainer, inode)
 		if err != nil {
 			return nil, err
 		}
@@ -42,14 +42,14 @@ func IdentifyProcessOfContainer(pSocket *Socket, pContainer *container.Container
 		return nil, errors.New("the protocol not supported")
 	}
 
-	return pProcess, nil
+	return targetProcess, nil
 }
 
 // SearchInodeFromNetOfPid returns inode from net of a specific pid in proc filesystem.
-func SearchInodeFromNetOfPid(pSocket *Socket, pid int) (uint64, error) {
+func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (uint64, error) {
 	// Select file path
 	netFilePath := ""
-	switch pSocket.Protocol {
+	switch targetSocket.Protocol {
 	case layers.LayerTypeTCP:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp")
 	case layers.LayerTypeUDP:
@@ -68,10 +68,10 @@ func SearchInodeFromNetOfPid(pSocket *Socket, pid int) (uint64, error) {
 
 	// Make local_address and rem_address string
 	// Assume a little endian
-	socketLocalPort := fmt.Sprintf("%04X", pSocket.LocalPort)
-	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(pSocket.RemoteIP), pSocket.RemotePort)
+	socketLocalPort := fmt.Sprintf("%04X", targetSocket.LocalPort)
+	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(targetSocket.RemoteIP), targetSocket.RemotePort)
 
-	// Search entry of net  pSocket
+	// Search entry of net  targetSocket
 	var inode uint64
 	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	entryScanner.Scan() // Skip header line
@@ -104,10 +104,10 @@ func SearchInodeFromNetOfPid(pSocket *Socket, pid int) (uint64, error) {
 }
 
 // SearchProcessOfContainerFromInode gets inode from net of a specific pid in proc filesystem.
-func SearchProcessOfContainerFromInode(pContainer *container.Container, inode uint64) (*Process, error) {
+func SearchProcessOfContainerFromInode(targetContainer *container.Container, inode uint64) (*Process, error) {
 	// Make pidStack
 	// NOTE: Avoid recursive function
-	containerdShimPid, err := GetPPID(pContainer.Pid)
+	containerdShimPid, err := GetPPID(targetContainer.Pid)
 	if err != nil {
 		return nil, err
 	}

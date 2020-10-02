@@ -124,34 +124,34 @@ func main() {
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("packet received")
 			var (
-				pSocket    *proc.Socket
-				pContainer *container.Container
-				pProcess   *proc.Process
+				targetSocket    *proc.Socket
+				targetContainer *container.Container
+				targetProcess   *proc.Process
 			)
-			pSocket, pContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
+			targetSocket, targetContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithField("packet", p).Warn(err)
 				continue
 			}
 			// OPTIMIZE: Maybe we should memoization.
-			if !pSocket.IsSupportProtocol() {
+			if !targetSocket.IsSupportProtocol() {
 				p.SetVerdict(netfilter.NF_ACCEPT)
-				logrus.WithField("socket", pSocket).Info("packet accepted")
+				logrus.WithField("socket", targetSocket).Info("packet accepted")
 				continue
 			}
-			pProcess, err = proc.IdentifyProcessOfContainer(pSocket, pContainer, &p.Packet)
+			targetProcess, err = proc.IdentifyProcessOfContainer(targetSocket, targetContainer, &p.Packet)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("socket", pSocket).Warn(err)
+				logrus.WithField("socket", targetSocket).Warn(err)
 				continue
 			}
 			communicationField := logrus.Fields{
-				"socket":    pSocket,
-				"container": pContainer,
-				"process":   pProcess,
+				"socket":    targetSocket,
+				"container": targetContainer,
+				"process":   targetProcess,
 			}
-			if !policies.IsDefined(pContainer, pProcess, pSocket) {
+			if !policies.IsDefined(targetContainer, targetProcess, targetSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithFields(communicationField).Warn("packet dropped")
 				continue

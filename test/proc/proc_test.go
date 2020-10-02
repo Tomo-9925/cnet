@@ -80,7 +80,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pContainer := &cnetContainer.Container{
+	targetContainer := &cnetContainer.Container{
 		ID: inspect.ID,
 		IP: net.ParseIP(inspect.NetworkSettings.IPAddress),
 		Name: inspect.Name,
@@ -91,26 +91,26 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	p := <-packets
 
 	// Get Socket Information
-	pSocket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, []*cnetContainer.Container{pContainer})
+	targetSocket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, []*cnetContainer.Container{targetContainer})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !pSocket.LocalIP.Equal(pContainer.IP) {
+	if !targetSocket.LocalIP.Equal(targetContainer.IP) {
 		t.Error("local ip address not located correctly")
 	}
-	if pSocket.RemotePort != 80 {
+	if targetSocket.RemotePort != 80 {
 		t.Error("remote port number not get correctly")
 	}
 
 	// Get Process of container information
-	pProcess, err := proc.IdentifyProcessOfContainer(pSocket, pContainer, &p.Packet)
+	targetProcess, err := proc.IdentifyProcessOfContainer(targetSocket, targetContainer, &p.Packet)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pProcess.Executable != "nc" {
+	if targetProcess.Executable != "nc" {
 		t.Error("executable not get correctly")
 	}
-	if pProcess.Path != "/usr/bin/nc" {
+	if targetProcess.Path != "/usr/bin/nc" {
 		t.Error("path not get correctly")
 	}
 }

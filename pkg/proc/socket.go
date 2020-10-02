@@ -27,8 +27,8 @@ const (
 
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
 func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (*Socket, *container.Container, error) {
-	var pSocket Socket
-	var pContainer *container.Container
+	var targetSocket Socket
+	var targetContainer *container.Container
 	var pDirection direction
 
 	// Check the protocol of network layer
@@ -43,42 +43,42 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	for _, container := range containers {
 		if ip.SrcIP.Equal(container.IP) {
 			pDirection = out
-			pContainer = container
-			pSocket.LocalIP, pSocket.RemoteIP = ip.SrcIP, ip.DstIP
+			targetContainer = container
+			targetSocket.LocalIP, targetSocket.RemoteIP = ip.SrcIP, ip.DstIP
 			break
 		} else if ip.DstIP.Equal(container.IP) {
 			pDirection = in
-			pContainer = container
-			pSocket.LocalIP, pSocket.RemoteIP = ip.DstIP, ip.SrcIP
+			targetContainer = container
+			targetSocket.LocalIP, targetSocket.RemoteIP = ip.DstIP, ip.SrcIP
 			break
 		}
 	}
-	if pContainer == nil {
+	if targetContainer == nil {
 		return nil, nil, errors.New("source of communication not identified")
 	}
 
 	// Check the protocol inside network layer
-	pSocket.Protocol = ip.NextLayerType()
-	switch pSocket.Protocol {
+	targetSocket.Protocol = ip.NextLayerType()
+	switch targetSocket.Protocol {
 	case layers.LayerTypeTCP:
 		tcp, _ := (*packet).Layer(layers.LayerTypeTCP).(*layers.TCP)
 		switch pDirection {
 		case out:
-			pSocket.LocalPort, pSocket.RemotePort = uint16(tcp.SrcPort), uint16(tcp.DstPort)
+			targetSocket.LocalPort, targetSocket.RemotePort = uint16(tcp.SrcPort), uint16(tcp.DstPort)
 		case in:
-			pSocket.LocalPort, pSocket.RemotePort = uint16(tcp.DstPort), uint16(tcp.SrcPort)
+			targetSocket.LocalPort, targetSocket.RemotePort = uint16(tcp.DstPort), uint16(tcp.SrcPort)
 		}
 	case layers.LayerTypeUDP:
 		udp, _ := (*packet).Layer(layers.LayerTypeUDP).(*layers.UDP)
 		switch pDirection {
 		case out:
-			pSocket.LocalPort, pSocket.RemotePort = uint16(udp.SrcPort), uint16(udp.DstPort)
+			targetSocket.LocalPort, targetSocket.RemotePort = uint16(udp.SrcPort), uint16(udp.DstPort)
 		case in:
-			pSocket.LocalPort, pSocket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
+			targetSocket.LocalPort, targetSocket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
 		}
 	}
 
-	return &pSocket, pContainer, nil
+	return &targetSocket, targetContainer, nil
 }
 
 // IsSupportProtocol reports whether the protocol is supported.
