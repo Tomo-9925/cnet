@@ -27,7 +27,9 @@ var (
 				Cmd: []string{"158.217.2.147", "80"},  // Web Server of Kansai University
 			},
 	}.Config
-	netcatHostConfig *container.HostConfig = &container.HostConfig{}
+	netcatHostConfig *container.HostConfig = &container.HostConfig{
+		AutoRemove: true,
+	}
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
@@ -73,7 +75,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err := cli.ContainerStart(ctx, apiResp.ID, types.ContainerStartOptions{}); err != nil{
 		t.Fatal(err)
 	}
-	defer cli.ContainerRemove(ctx, apiResp.ID, types.ContainerRemoveOptions{})
+	defer cli.ContainerStop(ctx, apiResp.ID, nil)
 
 	// Get container information
 	inspect, err := cli.ContainerInspect(ctx, apiResp.ID)
