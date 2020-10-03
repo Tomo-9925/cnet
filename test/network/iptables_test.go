@@ -8,13 +8,13 @@ import (
 
 const (
 	chainName string = "DOCKER-USER"
-	insertPos   uint16 = 1
+	ruleNum   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 )
 
 func TestNFQueueRule(t *testing.T) {
-	err := network.InsertNFQueueRule(chainName, protocol, insertPos, queueNum)
+	err := network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
 	if err != nil {
 		t.Fatal(err)
 	}
