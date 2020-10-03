@@ -14,7 +14,8 @@ import (
 
 var dockerCli *client.Client
 
-func ConnectCli() error{
+//ConnectCli connects to docker cli.
+func ConnectCli() error {
 	// Initialize client for the Docker Engine API
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -62,6 +63,7 @@ func GetDockerContainerInformation(containerID string) (*Container, error) {
 	}, nil
 }
 
+//RemoveContainerFromSlice removes container information from slice.
 func RemoveContainerFromSlice(containers []*Container, cid string) []*Container {
 	result := []*Container{}
 	for _, container := range containers {
@@ -72,6 +74,7 @@ func RemoveContainerFromSlice(containers []*Container, cid string) []*Container 
 	return result
 }
 
+// NewWatcher starts monitoring docker events.
 func NewWatcher() (<-chan events.Message, <-chan error) {
 	filter := filters.NewArgs()
 	filter.Add("type", "container")
