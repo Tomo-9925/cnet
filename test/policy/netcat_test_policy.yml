@@ -1,0 +1,10 @@
+policies:
+  - container:
+      name: "cnet_netcat_test"
+    communications:
+      - processes:
+          - executable: "nc"
+            path: "/usr/bin/nc"
+        sockets:
+          - protocol: "tcp"
+            remote_port: 80

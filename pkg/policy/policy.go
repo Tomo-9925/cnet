@@ -23,7 +23,7 @@ type Communication struct {
 // Socket is information about information needed to control network.
 type Socket struct {
 	Protocol   gopacket.LayerType
-	RemoteIP   net.IPNet
+	RemoteIP   *net.IPNet
 	LocalPort  uint16
 	RemotePort uint16
 }
@@ -32,4 +32,4 @@ type Socket struct {
 type Policies []*Policy
 
 // IsDefined reports whether the policy is defined.
-func (p *Policies) IsDefined(pContainer *container.Container, pProcess *proc.Process, pSocket *proc.Socket) bool
+func (p *Policies) IsDefined(targetContainer *container.Container, targetProcess *proc.Process, targetSocket *proc.Socket) bool
