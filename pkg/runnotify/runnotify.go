@@ -2,7 +2,6 @@ package runnotify
 
 import (
 	"path/filepath"
-
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/docker/docker/api/types/events"
 )
@@ -34,8 +33,8 @@ func (runNotifyApi *RunNotifyApi) Start() {
 	for {
 		select {
 		case msg := <-runNotifyApi.Messages:
-			switch {
-			case msg.Action == "create":
+			switch msg.Action{
+			case "start", "unpause":
 				cid := filepath.Base(msg.ID)
 				if lastRun == cid {
 					continue
@@ -43,12 +42,11 @@ func (runNotifyApi *RunNotifyApi) Start() {
 				runNotifyApi.runCh <- cid
 				lastRun = cid
 
-			case msg.Action == "stop":
+			case "pause", "die":
 				cid := filepath.Base(msg.ID)
 				if cid == lastKill {
 					continue
 				}
-
 				runNotifyApi.killCh <- cid
 				lastKill = cid
 			}

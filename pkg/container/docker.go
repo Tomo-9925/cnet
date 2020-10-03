@@ -75,8 +75,10 @@ func RemoveContainerFromSlice(containers []*Container, cid string) []*Container 
 func NewWatcher() (<-chan events.Message, <-chan error) {
 	filter := filters.NewArgs()
 	filter.Add("type", "container")
-	filter.Add("event", "create")
-	filter.Add("event", "stop")
+	filter.Add("event", "start")
+	filter.Add("event", "unpause")
+	filter.Add("event", "pause")
+	filter.Add("event", "die")
 
 	msg, err := dockerCli.Events(context.Background(), types.EventsOptions{
 		Filters: filter,

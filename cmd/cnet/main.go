@@ -43,6 +43,11 @@ func init() {
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.SetOutput(os.Stdout)
 
+	err := container.ConnectCli()
+	if err != nil {
+		logrus.Fatalln(err)
+	}
+
 	// Get Docker container informations
 	containers, err = container.GetDockerContainerInformations()
 	if err != nil {
@@ -61,10 +66,6 @@ func init() {
 		logrus.Fatalln(err)
 	}
 
-	err := docker.ConnectCli()
-	if err != nil {
-		log.Fatalln(err)
-	}
 	// Configure logrus
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
