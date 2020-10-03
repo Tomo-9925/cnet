@@ -125,10 +125,10 @@ func main() {
 			logrus.WithField("packet", p).Debug("packet received")
 			var (
 				targetSocket    *proc.Socket
-				targetContainer *container.Container
-				targetProcess   *proc.Process
+				communicatedContainer *container.Container
+				communicatedProcess   *proc.Process
 			)
-			targetSocket, targetContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
+			targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithField("packet", p).Warn(err)
@@ -140,7 +140,7 @@ func main() {
 				logrus.WithField("socket", targetSocket).Info("packet accepted")
 				continue
 			}
-			targetProcess, err = proc.IdentifyProcessOfContainer(targetSocket, targetContainer, &p.Packet)
+			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithField("socket", targetSocket).Warn(err)
@@ -148,10 +148,10 @@ func main() {
 			}
 			communicationField := logrus.Fields{
 				"socket":    targetSocket,
-				"container": targetContainer,
-				"process":   targetProcess,
+				"container": communicatedContainer,
+				"process":   communicatedProcess,
 			}
-			if !policies.IsDefined(targetContainer, targetProcess, targetSocket) {
+			if !policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithFields(communicationField).Warn("packet dropped")
 				continue
