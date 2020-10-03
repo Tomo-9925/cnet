@@ -3,6 +3,7 @@ package proc_test
 import (
 	"context"
 	"net"
+	"strconv"
 	"testing"
 
 	"github.com/AkihiroSuda/go-netfilter-queue"
@@ -20,11 +21,13 @@ var (
 	ctx context.Context = context.Background()
 	netcatContainerName string = "cnet_netcat_test"
 	netcatImage string = "docker.io/subfuzion/netcat"
+	netcatDestination string = "158.217.2.147"
+	netcatPort uint16 = 80
 	netcatContainerConfig *container.Config = types.ContainerCreateConfig{
 			Name: netcatContainerName,
 			Config: &container.Config{
 				Image: netcatImage,
-				Cmd: []string{"158.217.2.147", "80"},  // Web Server of Kansai University
+				Cmd: []string{netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
 			},
 	}.Config
 	netcatHostConfig *container.HostConfig = &container.HostConfig{
@@ -82,7 +85,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	targetContainer := &cnetContainer.Container{
+	startedContainer := &cnetContainer.Container{
 		ID: inspect.ID,
 		IP: net.ParseIP(inspect.NetworkSettings.IPAddress),
 		Name: inspect.Name,
@@ -93,26 +96,29 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	p := <-packets
 
 	// Get Socket Information
-	targetSocket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, []*cnetContainer.Container{targetContainer})
+	socket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, []*cnetContainer.Container{startedContainer})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !targetSocket.LocalIP.Equal(targetContainer.IP) {
+	if !socket.LocalIP.Equal(startedContainer.IP) {
 		t.Error("local ip address not located correctly")
 	}
-	if targetSocket.RemotePort != 80 {
+	if !socket.RemoteIP.Equal(net.ParseIP(netcatDestination)) {
+		t.Error("remote ip address not located correctly")
+	}
+	if socket.RemotePort != netcatPort {
 		t.Error("remote port number not get correctly")
 	}
 
 	// Get Process of container information
-	targetProcess, err := proc.IdentifyProcessOfContainer(targetSocket, targetContainer, &p.Packet)
+	communicatedProcess, err := proc.IdentifyProcessOfContainer(socket, startedContainer, &p.Packet)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if targetProcess.Executable != "nc" {
+	if communicatedProcess.Executable != "nc" {
 		t.Error("executable not get correctly")
 	}
-	if targetProcess.Path != "/usr/bin/nc" {
+	if communicatedProcess.Path != "/usr/bin/nc" {
 		t.Error("path not get correctly")
 	}
 }

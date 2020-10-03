@@ -25,60 +25,58 @@ type Process struct {
 }
 
 // IdentifyProcessOfContainer returns Process of container from Socket and Container and Packet.
-func IdentifyProcessOfContainer(targetSocket *Socket, targetContainer *container.Container, packet *gopacket.Packet) (*Process, error) {
-	var targetProcess *Process
-
-	switch targetSocket.Protocol {
+func IdentifyProcessOfContainer(socket *Socket, container *container.Container, packet *gopacket.Packet) (process *Process, err error) {
+	switch socket.Protocol {
 	case layers.LayerTypeTCP, layers.LayerTypeUDP:
-		inode, err := SearchInodeFromNetOfPid(targetSocket, targetContainer.Pid)
+		var inode uint64
+		inode, err = SearchInodeFromNetOfPid(socket, container.Pid)
 		if err != nil {
-			return nil, err
+			return
 		}
-		targetProcess, err = SearchProcessOfContainerFromInode(targetContainer, inode)
+		process, err = SearchProcessOfContainerFromInode(container, inode)
 		if err != nil {
-			return nil, err
+			return
 		}
 	default:
-		return nil, errors.New("the protocol not supported")
+		return process, errors.New("the protocol not supported")
 	}
-
-	return targetProcess, nil
+	return
 }
 
 // SearchInodeFromNetOfPid returns inode from net of a specific pid in proc filesystem.
-func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (uint64, error) {
+func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) {
 	// Select file path
-	netFilePath := ""
-	switch targetSocket.Protocol {
+	var netFilePath string
+	switch socket.Protocol {
 	case layers.LayerTypeTCP:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp")
 	case layers.LayerTypeUDP:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "udp")
+	// NOTE: The raw file does not contain rem_address, so the communicated process cannot be identified when more than one process is communicated with ICMP.
 	// case layers.LayerTypeICMPv4:
 	// 	netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
 	default:
-		return 0, errors.New("file path not defined")
+		return inode, errors.New("file path not defined")
 	}
 
 	// Read all file
-	file, err := ioutil.ReadFile(netFilePath)
+	var file []byte
+	file, err = ioutil.ReadFile(netFilePath)
 	if err != nil {
-		return 0, err
+		return
 	}
 
 	// Make local_address and rem_address string
-	// Assume a little endian
-	socketLocalPort := fmt.Sprintf("%04X", targetSocket.LocalPort)
-	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(targetSocket.RemoteIP), targetSocket.RemotePort)
+	socketLocalPort := fmt.Sprintf("%04X", socket.LocalPort)
+	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(socket.RemoteIP), socket.RemotePort)
 
-	// Search entry of net  targetSocket
-	var inode uint64
+	// Search entry of net  socket
 	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	entryScanner.Scan() // Skip header line
 	for entryScanner.Scan() {
 		columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 		columnScanner.Split(bufio.ScanWords)
-		remoteAddr := ""
+		var remoteAddr string
 		for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
 			switch columnCounter {
 			case 1:
@@ -89,29 +87,34 @@ func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (uint64, error) {
 				remoteAddr = columnScanner.Text()
 			case 9:
 				inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-				if err != nil {
-					return 0, err
+				if strings.HasSuffix(remoteAddr, "0000") {
+					break
+				} else if remoteAddr == socketRemoteAddr {
+					return
 				}
-				if remoteAddr == socketRemoteAddr {
-					return inode, err
-				}
-				break
 			}
 		}
 	}
-
-	return inode, nil
+	if inode != 0 {
+		return
+	}
+	return inode, errors.New("inode not found")
 }
 
 // SearchProcessOfContainerFromInode gets inode from net of a specific pid in proc filesystem.
-func SearchProcessOfContainerFromInode(targetContainer *container.Container, inode uint64) (*Process, error) {
+func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
 	// Make pidStack
-	// NOTE: Avoid recursive function
-	containerdShimPid, err := GetPPID(targetContainer.Pid)
+	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
+	var containerdShimPid int
+	containerdShimPid, err = GetPPID(container.Pid)
 	if err != nil {
-		return nil, err
+		return
 	}
-	childrenPIDs, err := GetChildrenPIDs(containerdShimPid)
+	var childrenPIDs []int
+	childrenPIDs, err = GetChildrenPIDs(containerdShimPid)
+	if err != nil {
+		return
+	}
 	var pids pidStack
 	pids.Push(childrenPIDs...)
 
@@ -121,81 +124,82 @@ func SearchProcessOfContainerFromInode(targetContainer *container.Container, ino
 		pid := pids.Pop()
 		processDirPath := filepath.Join(procPath, strconv.Itoa(pid))
 		fdDirPath := filepath.Join(processDirPath, "fd")
-		fdFiles, err := ioutil.ReadDir(fdDirPath)
-
+		var fdFiles []os.FileInfo
+		fdFiles, err = ioutil.ReadDir(fdDirPath)
+		if err != nil {
+			return
+		}
 		for _, fdFile := range fdFiles {
 			fdFilePath := filepath.Join(fdDirPath, fdFile.Name())
-			linkContent, err := os.Readlink(fdFilePath)
+			var linkContent string
+			linkContent, err = os.Readlink(fdFilePath)
 			if err != nil {
-				return nil, err
+				return
 			} else if strings.Contains(linkContent, inodeStr) {
-				commPath := filepath.Join(processDirPath, "comm")
-				commFile, err := ioutil.ReadFile(commPath)
+				var commFile []byte
+				commFile, err = ioutil.ReadFile(filepath.Join(processDirPath, "comm"))
 				if err != nil {
-					return nil, err
+					return
 				}
-				exePath := filepath.Join(processDirPath, "exe")
-				processPath, err := os.Readlink(exePath)
+				var processPath string
+				processPath, err = os.Readlink(filepath.Join(processDirPath, "exe"))
 				if err != nil {
-					return nil, err
+					return
 				}
 				return &Process{
 					Executable: strings.TrimSuffix(*(*string)(unsafe.Pointer(&commFile)), "\n"),
 					Path:       processPath,
 					Pid:        pid,
 					Inode:      inode,
-				}, nil
+				}, err
 			}
 		}
-
 		childrenPIDs, err = GetChildrenPIDs(pid)
 		if err != nil {
-			return nil, err
+			return
 		}
 		pids.Push(childrenPIDs...)
 	}
-
-	return nil, errors.New("process not found")
+	return process, errors.New("process not found")
 }
 
 // GetPPID gets the PPID from stat of proc filesystem.
-func GetPPID(pid int) (int, error) {
-	netFilePath := filepath.Join(procPath, strconv.Itoa(pid), "stat")
-	file, err := ioutil.ReadFile(netFilePath)
+func GetPPID(pid int) (ppid int, err error) {
+	var file []byte
+	file, err = ioutil.ReadFile(filepath.Join(procPath, strconv.Itoa(pid), "stat"))
 	if err != nil {
-		return 0, err
+		return
 	}
+
 	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	scanner.Split(bufio.ScanWords)
-
 	for i := 0; scanner.Scan(); i++ {
 		if i == 3 {
-			return strconv.Atoi(scanner.Text())
+			ppid, err = strconv.Atoi(scanner.Text())
+			break
 		}
 	}
-
-	return 0, errors.New("the stat file not scanned")
+	return
 }
 
 // GetChildrenPIDs gets children PIDs from children of proc filesystem.
-func GetChildrenPIDs(pid int) ([]int, error) {
+func GetChildrenPIDs(pid int) (childrenPIDs []int, err error) {
 	pidStr := strconv.Itoa(pid)
 	netFilePath := filepath.Join(procPath, pidStr, "task", pidStr, "children")
-	file, err := ioutil.ReadFile(netFilePath)
+	var file []byte
+	file, err = ioutil.ReadFile(netFilePath)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	scanner.Split(bufio.ScanWords)
-	var childrenPIDs []int
 	for scanner.Scan() {
-		pid, err := strconv.Atoi(scanner.Text())
+		pid, err = strconv.Atoi(scanner.Text())
 		if err != nil {
-			return nil, err
+			return
 		}
 		childrenPIDs = append(childrenPIDs, pid)
 	}
-
-	return childrenPIDs, nil
+	return
 }

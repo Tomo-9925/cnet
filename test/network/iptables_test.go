@@ -19,7 +19,7 @@ func TestNFQueueRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !network.ExistsNFQueueRule(chainName, protocol, queueNum) {
-		t.Fatal("couldn't append nfqueue rule")
+		t.Fatal("couldn't insert nfqueue rule")
 	}
 	err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {

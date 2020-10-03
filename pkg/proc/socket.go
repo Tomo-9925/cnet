@@ -25,73 +25,71 @@ const (
 	out
 )
 
-// CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
-func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (*Socket, *container.Container, error) {
-	var targetSocket Socket
-	var targetContainer *container.Container
-	var pDirection direction
+// NOTE: ICMP packets containing identifer may be able to support.
+var supportedProtocol []gopacket.LayerType = []gopacket.LayerType{
+	layers.LayerTypeTCP,
+	layers.LayerTypeUDP,
+}
 
+// CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
+func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
 	// Check the protocol of network layer
 	// This program only supports IPv4
 	ipLayer := (*packet).Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
-		return nil, nil, errors.New("packet not contained ipv4 layer")
+		return socket, communicatedContainer, errors.New("packet not contained ipv4 layer")
 	}
 	ip, _ := ipLayer.(*layers.IPv4)
 
 	// Check container and direction, local IP, remote IP
+	var packetDirection direction
 	for _, container := range containers {
 		if ip.SrcIP.Equal(container.IP) {
-			pDirection = out
-			targetContainer = container
-			targetSocket.LocalIP, targetSocket.RemoteIP = ip.SrcIP, ip.DstIP
+			packetDirection = out
+			communicatedContainer = container
+			socket = &Socket{LocalIP: ip.SrcIP, RemoteIP: ip.DstIP}
 			break
 		} else if ip.DstIP.Equal(container.IP) {
-			pDirection = in
-			targetContainer = container
-			targetSocket.LocalIP, targetSocket.RemoteIP = ip.DstIP, ip.SrcIP
+			packetDirection = in
+			communicatedContainer = container
+			socket = &Socket{LocalIP: ip.DstIP, RemoteIP: ip.SrcIP}
 			break
 		}
 	}
-	if targetContainer == nil {
-		return nil, nil, errors.New("source of communication not identified")
+	if communicatedContainer == nil {
+		return socket, communicatedContainer, errors.New("communicated container not found")
 	}
 
+
 	// Check the protocol inside network layer
-	targetSocket.Protocol = ip.NextLayerType()
-	switch targetSocket.Protocol {
+	socket.Protocol = ip.NextLayerType()
+	switch socket.Protocol {
 	case layers.LayerTypeTCP:
 		tcp, _ := (*packet).Layer(layers.LayerTypeTCP).(*layers.TCP)
-		switch pDirection {
+		switch packetDirection {
 		case out:
-			targetSocket.LocalPort, targetSocket.RemotePort = uint16(tcp.SrcPort), uint16(tcp.DstPort)
+			socket.LocalPort, socket.RemotePort = uint16(tcp.SrcPort), uint16(tcp.DstPort)
 		case in:
-			targetSocket.LocalPort, targetSocket.RemotePort = uint16(tcp.DstPort), uint16(tcp.SrcPort)
+			socket.LocalPort, socket.RemotePort = uint16(tcp.DstPort), uint16(tcp.SrcPort)
 		}
 	case layers.LayerTypeUDP:
 		udp, _ := (*packet).Layer(layers.LayerTypeUDP).(*layers.UDP)
-		switch pDirection {
+		switch packetDirection {
 		case out:
-			targetSocket.LocalPort, targetSocket.RemotePort = uint16(udp.SrcPort), uint16(udp.DstPort)
+			socket.LocalPort, socket.RemotePort = uint16(udp.SrcPort), uint16(udp.DstPort)
 		case in:
-			targetSocket.LocalPort, targetSocket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
+			socket.LocalPort, socket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
 		}
 	}
-
-	return &targetSocket, targetContainer, nil
+	return
 }
 
 // IsSupportProtocol reports whether the protocol is supported.
 func (s *Socket) IsSupportProtocol() bool {
-	switch s.Protocol {
-	case layers.LayerTypeTCP:
-		return true
-	case layers.LayerTypeUDP:
-		return true
-	// Note: ICMP packets containing identifer may be able to support.
-	// case layers.LayerTypeICMPv4:
-	// 	return true
-	default:
-		return false
+	for _, protocol := range supportedProtocol {
+		if s.Protocol == protocol {
+			return true
+		}
 	}
+	return false
 }
