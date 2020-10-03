@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/tomo-9925/cnet/pkg/container"
-
 	"github.com/docker/docker/api/types/events"
 )
 
@@ -17,11 +16,11 @@ type RunNotifyApi struct {
 }
 
 // NewRunNotifyApi return the RunNotifyApi
-func NewRunNotifyApi(runCh chan string, killCh chan string, errCh chan error) (*RunNotifyApi, error) {
+func NewRunNotifyApi(runCh chan string, killCh chan string, errCh chan error) *RunNotifyApi {
 	runNotifyApi := RunNotifyApi{Messages: nil, runCh: runCh, killCh: killCh, errCh: errCh}
 	runNotifyApi.Messages, runNotifyApi.Err = container.NewWatcher()
 
-	return &runNotifyApi, nil
+	return &runNotifyApi
 }
 
 // Start starts monitoring
@@ -36,7 +35,7 @@ func (runNotifyApi *RunNotifyApi) Start() {
 		select {
 		case msg := <-runNotifyApi.Messages:
 			switch {
-			case msg.Type == "create":
+			case msg.Action == "create":
 				cid := filepath.Base(msg.ID)
 				if lastRun == cid {
 					continue
@@ -44,7 +43,7 @@ func (runNotifyApi *RunNotifyApi) Start() {
 				runNotifyApi.runCh <- cid
 				lastRun = cid
 
-			case msg.Type == "destory":
+			case msg.Action == "stop":
 				cid := filepath.Base(msg.ID)
 				if cid == lastKill {
 					continue

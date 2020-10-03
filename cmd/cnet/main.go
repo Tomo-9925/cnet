@@ -61,6 +61,10 @@ func init() {
 		logrus.Fatalln(err)
 	}
 
+	err := docker.ConnectCli()
+	if err != nil {
+		log.Fatalln(err)
+	}
 	// Configure logrus
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -116,10 +120,7 @@ func main() {
 	killCh := make(chan string)
 	runErrCh := make(chan error)
 
-	runNotifyApi, err := runnotify.NewRunNotifyApi(runCh, killCh, runErrCh)
-	if err != nil {
-		logrus.Fatalln(err)
-	}
+	runNotifyApi := runnotify.NewRunNotifyApi(runCh, killCh, runErrCh)
 	go runNotifyApi.Start()
 
 	for {

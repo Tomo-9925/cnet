@@ -14,16 +14,19 @@ import (
 
 var dockerCli *client.Client
 
-// GetDockerContainerInformations return the information slice of Docker container.
-func GetDockerContainerInformations() ([]*Container, error) {
-	var containerInformations []*Container
-
+func ConnectCli() error{
 	// Initialize client for the Docker Engine API
 	cli, err := client.NewEnvClient()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	dockerCli = cli
+	return nil
+}
+
+// GetDockerContainerInformations return the information slice of Docker container.
+func GetDockerContainerInformations() ([]*Container, error) {
+	var containerInformations []*Container
 	// Get container list
 	containers, err := dockerCli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
@@ -73,7 +76,7 @@ func NewWatcher() (<-chan events.Message, <-chan error) {
 	filter := filters.NewArgs()
 	filter.Add("type", "container")
 	filter.Add("event", "create")
-	filter.Add("event", "destroy")
+	filter.Add("event", "stop")
 
 	msg, err := dockerCli.Events(context.Background(), types.EventsOptions{
 		Filters: filter,
