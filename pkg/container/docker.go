@@ -8,7 +8,7 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// GetDockerContainerInformations return the information slice of Docker container.
+// GetDockerContainerInformations returns the slice of container information about existing Docker container.
 func GetDockerContainerInformations() ([]*Container, error) {
 	var containerInformations []*Container
 
