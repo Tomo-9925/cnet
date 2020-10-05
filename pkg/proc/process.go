@@ -86,12 +86,13 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			case 2:
 				remoteAddr = columnScanner.Text()
 			case 9:
-				inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 				if strings.HasSuffix(remoteAddr, "0000") {
-					break
+					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 				} else if remoteAddr == socketRemoteAddr {
+					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 					return
 				}
+				break
 			}
 		}
 	}
