@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// ParseSecurityPolicy returns the information slice of policy.
+// ParseSecurityPolicy return the information slice of policy.
 func ParseSecurityPolicy(path string, containers []*container.Container) (Policies, error) {
 	// Open yaml file
 	buf, err := ioutil.ReadFile(path)
