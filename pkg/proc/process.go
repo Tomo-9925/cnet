@@ -1,20 +1,6 @@
 package proc
 
-import (
-	"bufio"
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"unsafe"
-
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/tomo-9925/cnet/pkg/container"
-)
+import "github.com/tomo-9925/cnet/pkg/container"
 
 // Process is information about process needed to analyze communications of container.
 type Process struct {

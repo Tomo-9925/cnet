@@ -22,7 +22,6 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
-	ruleNum   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -55,7 +54,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
+	err = network.AppendNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -99,15 +98,13 @@ func deinit() {
 func main() {
 	defer deinit()
 
-	// Hook signal
+	// Hook SIGINT event
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	// Hook NFQueue
-	var queue *netfilter.NFQueue
-	queue, err = netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
+	queue, err := netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
 	if err != nil {
-		deinit()
 		logrus.Fatalln(err)
 	}
 	defer queue.Close()
@@ -119,45 +116,36 @@ func main() {
 	for {
 		select {
 		case s := <-sig:
-			logrus.WithField("signal", s).Info("signal received")
+			logrus.WithField("signal", s).Info("Signal received")
+			deinit()
 			return
 		case p := <-packets:
-			logrus.WithField("packet", p).Debug("packet received")
-			var (
-				targetSocket    *proc.Socket
-				communicatedContainer *container.Container
-				communicatedProcess   *proc.Process
-			)
-			targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
-			if err != nil {
-				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("packet", p).Warn(err)
-				continue
-			}
+			logrus.WithField("packet", p).Debug("Packet received")
+			pSocket := proc.PtoS(&p.Packet)
 			// OPTIMIZE: Maybe we should memoization.
-			if !targetSocket.IsSupportProtocol() {
+			if !pSocket.IsSupportProtocol() {
 				p.SetVerdict(netfilter.NF_ACCEPT)
-				logrus.WithField("socket", targetSocket).Info("packet accepted")
+				logrus.WithField("socket", pSocket).Info("Packet accepted")
 				continue
 			}
-			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
+			pProcess, pContainer, err := proc.IdentifyProcessOfContainer(pSocket, containers)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("socket", targetSocket).Warn(err)
+				logrus.WithField("socket", pSocket).Info(err)
 				continue
 			}
 			communicationField := logrus.Fields{
-				"socket":    targetSocket,
-				"container": communicatedContainer,
-				"process":   communicatedProcess,
+				"socket":    pSocket,
+				"container": pContainer,
+				"process":   pProcess,
 			}
-			if !policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
+			if !policies.IsDefined(pContainer, pProcess, pSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithFields(communicationField).Warn("packet dropped")
+				logrus.WithFields(communicationField).Warning("Dropped an undefined communication")
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)
-			logrus.WithFields(communicationField).Debug("packet accepted")
+			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
 		}
 	}
 }
