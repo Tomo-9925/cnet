@@ -6,27 +6,28 @@ import (
 	"strings"
 
 	"github.com/google/gopacket/layers"
-	"github.com/k0kubun/pp"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/proc"
 	"gopkg.in/yaml.v2"
 )
 
-type yamlPolicies []struct {
-	Container struct {
-		Name string `yaml:"name"`
-		ID string `yaml:"id"`
-	}
-	Communications []struct {
-		Processes []struct {
-			Executable string `yaml:"executable"`
-			Path string `yaml:"path"`
+type yamlPolicies struct {
+	Policies []struct {
+		Container struct {
+			Name string `yaml:"name"`
+			ID string `yaml:"id"`
 		}
-		Sockets []struct {
-			Protocol string `yaml:"protocol"`
-			LocalPort uint16 `yaml:"local_port"`
-			RemoteIP string `yaml:"remote_ip"`
-			RemotePort uint16 `yaml:"remote_port"`
+		Communications []struct {
+			Processes []struct {
+				Executable string `yaml:"executable"`
+				Path string `yaml:"path"`
+			}
+			Sockets []struct {
+				Protocol string `yaml:"protocol"`
+				LocalPort uint16 `yaml:"local_port"`
+				RemoteIP string `yaml:"remote_ip"`
+				RemotePort uint16 `yaml:"remote_port"`
+			}
 		}
 	}
 }
@@ -37,32 +38,31 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 	var rawPolicyData []byte
 	rawPolicyData, err = ioutil.ReadFile(path)
 	if err != nil {
-		return policies, err
+		return
 	}
 
 	// Parse to yamlPolicies
 	var yamlData yamlPolicies
 	err = yaml.Unmarshal(rawPolicyData, &yamlData)
 	if err != nil {
-		return policies, err
+		return
 	}
-	pp.Println(yamlData)
 
 	// Make Policies
-	for _, yamlPolicy := range yamlData {
-		var policy *Policy
-		policy.Container = &container.Container{
+	var parsedPolicies Policies
+	for _, yamlPolicy := range yamlData.Policies {
+		var parsedPolicy Policy
+		parsedPolicy.Container = &container.Container{
 			Name: yamlPolicy.Container.Name,
 			ID: yamlPolicy.Container.ID,
 		}
 		for _, yamlCommunication := range yamlPolicy.Communications {
-			var communication *Communication
+			var communication Communication
 			for _, yamlProcess := range yamlCommunication.Processes {
-				process := &proc.Process{
+				communication.Processes = append(communication.Processes, &proc.Process{
 					Executable: yamlProcess.Executable,
 					Path: yamlProcess.Path,
-				}
-				communication.Processes = append(communication.Processes, process)
+				})
 			}
 			for _, yamlSocket := range yamlCommunication.Sockets {
 				socket := &Socket{
@@ -81,17 +81,16 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 				if strings.Contains(yamlSocket.RemoteIP, "/") {
 					_, socket.RemoteIP, err = net.ParseCIDR(yamlSocket.RemoteIP)
 					if err != nil {
-						return policies, err
+						return
 					}
 				} else {
-					socket.RemoteIP.IP = net.ParseIP(yamlSocket.RemoteIP)
+					socket.RemoteIP = &net.IPNet{IP: net.ParseIP(yamlSocket.RemoteIP)}
 				}
 				communication.Sockets = append(communication.Sockets, socket)
 			}
-			policy.Communications = append(policy.Communications, communication)
+			parsedPolicy.Communications = append(parsedPolicy.Communications, &communication)
 		}
-		policies = append(policies, policy)
+		parsedPolicies = append(parsedPolicies, &parsedPolicy)
 	}
-
-	return policies, err
+	return parsedPolicies, err
 }
