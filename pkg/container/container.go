@@ -20,6 +20,8 @@ func (c *Container) Equal(x *Container) bool {
 			return true
 		}
 		return false
+	} else if c.Name == "" || x.Name == "" {
+		return false
 	}
 	// NOTE: Container names got from the Docker Engine API may have a slash at the beginning.
 	hasSlash := [2]bool{c.Name[0]=='/', x.Name[0]=='/'}

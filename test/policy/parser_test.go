@@ -16,10 +16,6 @@ import (
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-const (
-	policyPath string = "./netcat_test_policy.yml"
-)
-
 var (
 	// test data
 	testContainerName string = "cnet_netcat_test"
@@ -29,8 +25,24 @@ var (
 	testSocketRemoteIP net.IP = net.ParseIP("158.217.2.147")
 	testSocketRemotePort uint16 = 80
 
-	// test policy data
-	rawPolicies string = fmt.Sprintf(
+  testPolicies policy.Policies = policy.Policies{{
+    Container: &container.Container{
+      Name: testContainerName,
+    },
+    Communications: []*policy.Communication{{
+      Processes: []*proc.Process{{
+        Executable: testProcessExecutable,
+        Path: testProcessPath}},
+      Sockets: []*policy.Socket{{
+        Protocol: testSocketProtocol,
+        RemoteIP: &net.IPNet{IP: testSocketRemoteIP},
+        RemotePort: testSocketRemotePort}},
+    }},
+  }}
+)
+
+func TestParseSecurityPolicy(t *testing.T) {
+  var rawPolicies string = fmt.Sprintf(
 `policies:
   - container:
       name: "%s"
@@ -43,35 +55,17 @@ var (
             remote_ip: %s
             remote_port: %d
 `,
-	testContainerName,
-	testProcessExecutable, testProcessPath,
-	testSocketProtocol.String(), testSocketRemoteIP.String(), testSocketRemotePort)
-	assumedPolicies policy.Policies = policy.Policies{&policy.Policy{
-		Container: &container.Container{
-			Name: testContainerName,
-		},
-		Communications: []*policy.Communication{&policy.Communication{
-			Processes: []*proc.Process{&proc.Process{
-				Executable: testProcessExecutable,
-				Path: testProcessPath}},
-			Sockets: []*policy.Socket{&policy.Socket{
-				Protocol: testSocketProtocol,
-				RemoteIP: &net.IPNet{IP: testSocketRemoteIP},
-				RemotePort: testSocketRemotePort}},
-		}},
-	}}
-)
+    testContainerName,
+    testProcessExecutable, testProcessPath,
+    testSocketProtocol.String(), testSocketRemoteIP.String(), testSocketRemotePort)
 
-func TestParseSecurityPolicy(t *testing.T) {
 	// Make YAML file
-	tmpPolicyFile, err := ioutil.TempFile("", "testPolicy.yaml")
+	tmpPolicyFile, err := ioutil.TempFile("", "testPolicy.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() {
-		tmpPolicyFile.Close()
-		os.Remove(tmpPolicyFile.Name())
-	}()
+	defer tmpPolicyFile.Close()
+	defer os.Remove(tmpPolicyFile.Name())
 	if _, err := tmpPolicyFile.Write( *(*[]byte)(unsafe.Pointer(&rawPolicies)) ); err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +75,8 @@ func TestParseSecurityPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(parsedPolicies, assumedPolicies); diff != "" {
+	if diff := cmp.Diff(parsedPolicies, testPolicies); diff != "" {
 		t.Error("policies differs:", diff)
 	}
 }
+
