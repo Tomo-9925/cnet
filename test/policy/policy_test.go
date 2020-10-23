@@ -33,13 +33,13 @@ func TestSocketIsDefined(t *testing.T) {
 		for satisfyProcess, targetProcess := range testCommunicatedProcess {
 			for satisfySocket, targetSocket := range testTargetSocket {
 				if satisfyContainer && satisfyProcess && satisfySocket {
-					if !testPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
+					if !expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
 						t.Error("defined test communication not passed")
 						pp.Println(targetContainer, targetProcess, targetSocket)
 					}
 					continue
 				}
-				if testPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
+				if expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
 					t.Error("undefined test communication passed:")
 					pp.Println(targetContainer, targetProcess, targetSocket)
 				}

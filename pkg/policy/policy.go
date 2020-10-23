@@ -29,13 +29,13 @@ type Socket struct {
 	RemotePort uint16
 }
 
-// Satisfy reports whether content of the proc.Socket stisfies policy.Socket.
-func (s *Socket) Satisfy(x *proc.Socket) bool {
+// IsMatched reports whether content of the proc.Socket matches policy.Socket.
+func (s *Socket) IsMatched(x *proc.Socket) bool {
 	if s.Protocol != x.Protocol {
 		return false
-	} else if s.LocalPort != 0 && x.LocalPort != 0 && s.LocalPort != x.LocalPort {
+	} else if s.LocalPort != 0 && s.LocalPort != x.LocalPort {
 		return false
-	} else if s.RemotePort != 0 && x.RemotePort != 0 && s.RemotePort != x.RemotePort {
+	} else if s.RemotePort != 0 && s.RemotePort != x.RemotePort {
 		return false
 	} else if !bytes.Equal(s.RemoteIP.Mask, net.IPMask{}) && !s.RemoteIP.Contains(x.RemoteIP) {
 		return false
@@ -61,7 +61,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 					continue
 				}
 				for _, socket := range communication.Sockets {
-					if socket.Satisfy(targetSocket) {
+					if socket.IsMatched(targetSocket) {
 						return true
 					}
 				}

@@ -16,7 +16,7 @@ type Container struct {
 // Equal reports whether c and x are the same container.
 func (c *Container) Equal(x *Container) bool {
 	if c.ID != "" && x.ID != "" {
-		if strings.HasPrefix(c.ID, x.ID) || strings.HasPrefix(c.ID, x.ID) {
+		if strings.HasPrefix(c.ID, x.ID) || strings.HasPrefix(x.ID, c.ID) {
 			return true
 		}
 		return false

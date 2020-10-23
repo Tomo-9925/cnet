@@ -28,7 +28,8 @@ func (p *Process)Equal(x *Process) bool {
 		if p.Path == x.Path {
 			return true
 		}
-	} else if p.Executable != "" && p.Executable == x.Executable {
+		return false
+	} else if p.Executable != "" && x.Executable != "" && p.Executable == x.Executable {
 		return true
 	}
 	return false

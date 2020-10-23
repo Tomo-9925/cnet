@@ -25,7 +25,7 @@ var (
 	testSocketRemoteIP net.IP = net.ParseIP("158.217.2.147")
 	testSocketRemotePort uint16 = 80
 
-  testPolicies policy.Policies = policy.Policies{{
+  expectedPolicies policy.Policies = policy.Policies{{
     Container: &container.Container{
       Name: testContainerName,
     },
@@ -75,7 +75,7 @@ func TestParseSecurityPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(parsedPolicies, testPolicies); diff != "" {
+	if diff := cmp.Diff(parsedPolicies, expectedPolicies); diff != "" {
 		t.Error("policies differs:", diff)
 	}
 }
