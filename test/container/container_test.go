@@ -16,18 +16,18 @@ func TestContainerEqual(t *testing.T) {
 	}
 
 	if testContainers["hoge"].Equal(testContainers["fuga"]) {
-		t.Error("hoge container equal fuga container")
+		t.Error("expected hoge container equal fuga container but actual hoge container not equal fuga container")
 	}
 	if !testContainers["hoge"].Equal(testContainers["shortHoge"]) {
-		t.Error("hoge container not equal short hoge container")
+		t.Error("expected hoge container not equal short hoge container but actual hoge container equal short hoge container")
 	}
 	if !testContainers["hoge"].Equal(testContainers["nameOnlyHoge"]) {
-		t.Error("hoge container not equal name only hoge container")
+		t.Error("expected hoge container not equal name only hoge container but actual hoge container equal name only hoge container")
 	}
 	if !testContainers["hoge"].Equal(testContainers["fugaHavingHogeID"]) {
-		t.Error("hoge container not equal fuga having hoge id container")
+		t.Error("expected hoge container not equal fuga having hoge id container but actual hoge container equal fuga having hoge id container")
 	}
 	if testContainers["fuga"].Equal(testContainers["fugaHavingHogeID"]) {
-		t.Error("fuga container equal fuga having hoge id container")
+		t.Error("expected fuga container equal fuga having hoge id container but actual fuga container not equal fuga having hoge id container")
 	}
 }
