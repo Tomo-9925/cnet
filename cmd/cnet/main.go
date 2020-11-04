@@ -48,7 +48,7 @@ func init() {
 	}
 
 	// Get security policy data
-	policies, err = policy.ParseSecurityPolicy(policyPath, containers)
+	policies, err = policy.ParseSecurityPolicy(policyPath)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
