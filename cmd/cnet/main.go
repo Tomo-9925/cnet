@@ -5,6 +5,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/tomo-9925/cnet/pkg/runnotify"
+
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
@@ -41,6 +43,11 @@ func init() {
 	// Configure the basic setup of logrus
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.SetOutput(os.Stdout)
+
+	err := container.ConnectCli()
+	if err != nil {
+		logrus.Fatalln(err)
+	}
 
 	// Get Docker container informations
 	containers, err = container.GetDockerContainerInformations()
@@ -113,14 +120,39 @@ func main() {
 	defer queue.Close()
 	packets := queue.GetPackets()
 
-	// TODO: Container start-up detection and file change detection.
-	// 全体報告会の資料添削のときに，以前のシステム構成のことを思い出しました…
+	runCh := make(chan string)
+	killCh := make(chan string)
+	runErrCh := make(chan error)
+
+	runNotifyApi := runnotify.NewRunNotifyApi(runCh, killCh, runErrCh)
+	go runNotifyApi.Start()
 
 	for {
 		select {
 		case s := <-sig:
 			logrus.WithField("signal", s).Info("signal received")
 			return
+		case cid := <-runCh:
+			logrus.WithField("RUN cid:", cid).Info("Container start")
+
+			//Include newly launched containers in the monitoring
+			container, err := container.GetDockerContainerInformation(cid)
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+			containers = append(containers, container)
+
+			// Reload security policy data
+			policies, err = policy.ParseSecurityPolicy(policyPath, containers)
+			if err != nil {
+				logrus.Fatalln(err)
+			}
+		case cid := <-killCh:
+			logrus.WithField("RUN cid:", cid).Info("Container stop")
+			//Removing finished containers from monitoring
+			container.RemoveContainerFromSlice(containers, cid)
+		case cid := <-runErrCh:
+			logrus.WithField("RUN cid:", cid).Info("An error occurred when starting the container")
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("packet received")
 			var (

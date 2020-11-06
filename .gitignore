@@ -45,3 +45,4 @@ Temporary Items
 *.test
 *.out
 # vendor/ # Dependency directories (remove the comment to include it)
+.idea/
