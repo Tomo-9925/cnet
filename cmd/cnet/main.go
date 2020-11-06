@@ -22,6 +22,7 @@ const (
 
 	// iptables settings
 	chainName string = "DOCKER-USER"
+	ruleNum   uint16 = 1
 	protocol  string = "all"
 	queueNum  uint16 = 2
 
@@ -54,7 +55,7 @@ func init() {
 	}
 
 	// Configure iptables
-	err = network.AppendNFQueueRule(chainName, protocol, queueNum)
+	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -98,13 +99,15 @@ func deinit() {
 func main() {
 	defer deinit()
 
-	// Hook SIGINT event
+	// Hook signal
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	// Hook NFQueue
-	queue, err := netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
+	var queue *netfilter.NFQueue
+	queue, err = netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
 	if err != nil {
+		deinit()
 		logrus.Fatalln(err)
 	}
 	defer queue.Close()
@@ -116,36 +119,45 @@ func main() {
 	for {
 		select {
 		case s := <-sig:
-			logrus.WithField("signal", s).Info("Signal received")
-			deinit()
+			logrus.WithField("signal", s).Info("signal received")
 			return
 		case p := <-packets:
-			logrus.WithField("packet", p).Debug("Packet received")
-			pSocket := proc.PtoS(&p.Packet)
-			// OPTIMIZE: Maybe we should memoization.
-			if !pSocket.IsSupportProtocol() {
-				p.SetVerdict(netfilter.NF_ACCEPT)
-				logrus.WithField("socket", pSocket).Info("Packet accepted")
-				continue
-			}
-			pProcess, pContainer, err := proc.IdentifyProcessOfContainer(pSocket, containers)
+			logrus.WithField("packet", p).Debug("packet received")
+			var (
+				targetSocket    *proc.Socket
+				communicatedContainer *container.Container
+				communicatedProcess   *proc.Process
+			)
+			targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("socket", pSocket).Info(err)
+				logrus.WithField("packet", p).Warn(err)
+				continue
+			}
+			// OPTIMIZE: Maybe we should memoization.
+			if !targetSocket.IsSupportProtocol() {
+				p.SetVerdict(netfilter.NF_ACCEPT)
+				logrus.WithField("socket", targetSocket).Info("packet accepted")
+				continue
+			}
+			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
+			if err != nil {
+				p.SetVerdict(netfilter.NF_DROP)
+				logrus.WithField("socket", targetSocket).Warn(err)
 				continue
 			}
 			communicationField := logrus.Fields{
-				"socket":    pSocket,
-				"container": pContainer,
-				"process":   pProcess,
+				"socket":    targetSocket,
+				"container": communicatedContainer,
+				"process":   communicatedProcess,
 			}
-			if !policies.IsDefined(pContainer, pProcess, pSocket) {
+			if !policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
 				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithFields(communicationField).Warning("Dropped an undefined communication")
+				logrus.WithFields(communicationField).Warn("packet dropped")
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)
-			logrus.WithFields(communicationField).Debug("Accepted a defined communication")
+			logrus.WithFields(communicationField).Debug("packet accepted")
 		}
 	}
 }

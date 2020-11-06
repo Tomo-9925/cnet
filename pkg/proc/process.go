@@ -1,6 +1,20 @@
 package proc
 
-import "github.com/tomo-9925/cnet/pkg/container"
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"unsafe"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/tomo-9925/cnet/pkg/container"
+)
 
 // Process is information about process needed to analyze communications of container.
 type Process struct {
@@ -72,13 +86,12 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			case 2:
 				remoteAddr = columnScanner.Text()
 			case 9:
+				inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 				if strings.HasSuffix(remoteAddr, "0000") {
-					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
+					break
 				} else if remoteAddr == socketRemoteAddr {
-					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 					return
 				}
-				break
 			}
 		}
 	}
