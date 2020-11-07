@@ -143,7 +143,7 @@ func main() {
 			containers = append(containers, container)
 
 			// Reload security policy data
-			policies, err = policy.ParseSecurityPolicy(policyPath, containers)
+			policies, err = policy.ParseSecurityPolicy(policyPath)
 			if err != nil {
 				logrus.Fatalln(err)
 			}
@@ -156,7 +156,7 @@ func main() {
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("packet received")
 			var (
-				targetSocket    *proc.Socket
+				targetSocket          *proc.Socket
 				communicatedContainer *container.Container
 				communicatedProcess   *proc.Process
 			)

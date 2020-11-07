@@ -39,7 +39,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 		return false
 	} else if !bytes.Equal(s.RemoteIP.Mask, net.IPMask{}) && !s.RemoteIP.Contains(x.RemoteIP) {
 		return false
-	} else if !s.RemoteIP.IP.Equal(x.RemoteIP) {
+	} else if !bytes.Equal(s.RemoteIP.IP, net.IP{}) && !s.RemoteIP.IP.Equal(x.RemoteIP) {
 		return false
 	}
 	return true
