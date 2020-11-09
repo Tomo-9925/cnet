@@ -124,8 +124,8 @@ func main() {
 	killCh := make(chan string)
 	runErrCh := make(chan error)
 
-	runNotifyApi := runnotify.NewRunNotifyApi(runCh, killCh, runErrCh)
-	go runNotifyApi.Start()
+	runNotifyAPI := runnotify.NewAPI(runCh, killCh, runErrCh)
+	go runNotifyAPI.Start()
 
 	for {
 		select {

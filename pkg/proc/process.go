@@ -24,11 +24,8 @@ type Process struct {
 
 // Equal reports whether c and x are the same process.
 func (p *Process)Equal(x *Process) bool {
-	if p.Path != "" && x.Path != "" {
-		if p.Path == x.Path {
-			return true
-		}
-		return false
+	if p.Path != "" && x.Path != "" && p.Path == x.Path {
+		return true
 	} else if p.Executable != "" && x.Executable != "" && p.Executable == x.Executable {
 		return true
 	}
