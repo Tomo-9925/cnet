@@ -17,10 +17,11 @@ func init() {
 	logrus.Debug("trying to initialize docker engine api client")
 	var err error
 	dockerCli, err = client.NewEnvClient()
+	cliField := logrus.WithField("client", *dockerCli)
 	if err != nil {
-		logrus.Fatalln(err)
+		cliField.WithField("error", err).Fatal("faild to initialize docker engine api client")
 	}
-	logrus.WithField("client", *dockerCli).Debug("docker engine api client initialized")
+	cliField.Debug("docker engine api client initialized")
 }
 
 // FetchDockerContainerInspections return the information slice of Docker container.
@@ -44,22 +45,23 @@ func FetchDockerContainerInspections() (containers []*Container, err error) {
 		containers = append(containers, container)
 	}
 
-	logrus.WithField("containers", containers).Debug("container inspections fetched successfully")
+	logrus.WithField("containers", containers).Debug("container inspections fetched")
 	return
 }
 
 // FetchDockerContainerInspection return the information of Docker container.
 func FetchDockerContainerInspection(cid string) (container *Container, err error) {
-	logrus.WithField("container_id", cid).Debug("trying to fetch docker container inspection")
+	cidField := logrus.WithField("container_id", cid)
+	cidField.Debug("trying to fetch docker container inspection")
 
 	var inspect types.ContainerJSON
 	inspect, err = dockerCli.ContainerInspect(context.Background(), cid)
 	if err != nil {
-		logrus.WithField("container_id", cid).Debug("container inspection not fetched")
+		cidField.WithField("error", err).Debug("container inspection not fetched")
 		return
 	}
 
-	logrus.WithField("container_inspection", inspect).Debug("container inspection fetched successfully")
+	cidField.WithField("container_inspection", inspect).Debug("container inspection fetched")
 	return &Container{
 		ID:   inspect.ID,
 		IP:   net.ParseIP(inspect.NetworkSettings.IPAddress),
