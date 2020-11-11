@@ -2,9 +2,11 @@ package policy
 
 import (
 	"bytes"
+	"fmt"
 	"net"
 
 	"github.com/google/gopacket"
+	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
@@ -29,6 +31,10 @@ type Socket struct {
 	RemotePort uint16
 }
 
+func (s *Socket)String() string {
+	return fmt.Sprintf("{Protocol:%s RemoteIP:%s LocalPort:%d RemotePort:%d}", s.Protocol, s.RemoteIP, s.LocalPort, s.RemotePort)
+}
+
 // IsMatched reports whether content of the proc.Socket matches policy.Socket.
 func (s *Socket) IsMatched(x *proc.Socket) bool {
 	if s.Protocol != x.Protocol {
@@ -50,23 +56,46 @@ type Policies []*Policy
 
 // IsDefined reports whether the policy is defined.
 func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) bool {
+	relevantFields := logrus.WithFields(logrus.Fields{
+		"policies": *p,
+		"communicated_container": communicatedContainer,
+		"communicated_process": communicatedProcess,
+		"target_socket": targetSocket,
+	})
+	relevantFields.Debug("checking whether define the communication in this policies")
+
 	// HACK: So many indents that it's hard to understand. The structure of Policies may need to be rethought.
 	for _, policy := range *p {
 		if !policy.Container.Equal(communicatedContainer) {
 			continue
 		}
+		logrus.WithFields(logrus.Fields{
+			"policy_container": policy.Container,
+			"communicated_container": communicatedContainer,
+		}).Trace("the relevant container found")
 		for _, communication := range policy.Communications {
-			for _, process := range communication.Processes {
-				if !process.Equal(communicatedProcess) {
+			for _, policyProcess := range communication.Processes {
+				if !policyProcess.Equal(communicatedProcess) {
 					continue
 				}
-				for _, socket := range communication.Sockets {
-					if socket.IsMatched(targetSocket) {
+				logrus.WithFields(logrus.Fields{
+					"policy_process": policyProcess,
+					"communicated_process": communicatedProcess,
+				}).Trace("the relevant process found")
+				for _, policySocket := range communication.Sockets {
+					if policySocket.IsMatched(targetSocket) {
+						logrus.WithFields(logrus.Fields{
+							"policy_socket": policySocket,
+							"targetSocket": targetSocket,
+						}).Trace("the relevant socket found")
+						relevantFields.Debug("the communication defined")
 						return true
 					}
 				}
 			}
 		}
 	}
+
+	relevantFields.Debug("the communication not defined")
 	return false
 }

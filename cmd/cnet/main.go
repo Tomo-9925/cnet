@@ -60,7 +60,7 @@ func init() {
 
 	// Configure logrus
 	if debug {
-		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetLevel(logrus.TraceLevel)
 	} else {
 		logrus.SetFormatter(&logrus.TextFormatter{
 			DisableColors: true,
