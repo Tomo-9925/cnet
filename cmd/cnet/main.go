@@ -40,28 +40,19 @@ var (
 )
 
 func init() {
-	// Configure the basic setup of logrus
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.SetOutput(os.Stdout)
 
-	err := container.ConnectCli()
+	containers, err = container.FetchDockerContainerInspections()
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	// Get Docker container informations
-	containers, err = container.GetDockerContainerInformations()
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	// Get security policy data
 	policies, err = policy.ParseSecurityPolicy(policyPath)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	// Configure iptables
 	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
 	if err != nil {
 		logrus.Fatalln(err)
@@ -87,7 +78,7 @@ func init() {
 		"logfile":    logFile,
 		"containers": containers,
 		"policies":   policies,
-	}).Debug("Cnet initialized")
+	}).Info("cnet initialized")
 }
 
 func deinit() {
@@ -136,7 +127,7 @@ func main() {
 			logrus.WithField("RUN cid:", cid).Info("Container start")
 
 			//Include newly launched containers in the monitoring
-			container, err := container.GetDockerContainerInformation(cid)
+			container, err := container.FetchDockerContainerInspection(cid)
 			if err != nil {
 				logrus.Fatalln(err)
 			}
