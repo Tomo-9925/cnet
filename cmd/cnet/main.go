@@ -91,11 +91,13 @@ func init() {
 }
 
 func deinit() {
+	err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
+	if err != nil {
+		logrus.Errorln(err)
+	}
+
+	//Writing to the log file is only in debug mode
 	if !debug {
-		err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
-		if err != nil {
-			logrus.Errorln(err)
-		}
 		err = logFile.Close()
 		if err != nil {
 			logrus.Errorln(err)
@@ -156,7 +158,7 @@ func main() {
 		case p := <-packets:
 			logrus.WithField("packet", p).Debug("packet received")
 			var (
-				targetSocket    *proc.Socket
+				targetSocket          *proc.Socket
 				communicatedContainer *container.Container
 				communicatedProcess   *proc.Process
 			)
