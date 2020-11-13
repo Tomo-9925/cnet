@@ -82,11 +82,13 @@ func init() {
 }
 
 func deinit() {
+	err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
+	if err != nil {
+		logrus.Errorln(err)
+	}
+
+	//Writing to the log file is only in debug mode
 	if !debug {
-		err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
-		if err != nil {
-			logrus.Errorln(err)
-		}
 		err = logFile.Close()
 		if err != nil {
 			logrus.Errorln(err)
