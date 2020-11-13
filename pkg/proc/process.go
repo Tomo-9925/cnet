@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 )
 
@@ -34,23 +35,41 @@ func (p *Process)Equal(x *Process) bool {
 
 // IdentifyProcessOfContainer returns Process of container from Socket and Container and Packet.
 func IdentifyProcessOfContainer(socket *Socket, container *container.Container, packet *gopacket.Packet) (process *Process, err error) {
+	argFields := logrus.WithFields(logrus.Fields{
+		"target_socket": socket.String(),
+		"communicated_container": container.String(),
+		// "packet": packet,
+	})
+	argFields.Debug("trying to identify process of container")
+
 	switch socket.Protocol {
 	case layers.LayerTypeTCP, layers.LayerTypeUDP:
 		var inode uint64
 		inode, err = SearchInodeFromNetOfPid(socket, container.Pid)
 		if err != nil {
+			argFields.WithField("error", err).Debug("failed to indentify process of container")
 			return
 		}
 		process, err = SearchProcessOfContainerFromInode(container, inode)
-	default:
-		return process, errors.New("the protocol not supported")
+		if err != nil {
+			argFields.WithField("error", err).Debug("failed to indentify process of container")
+		}
+		return
 	}
+
+	err = errors.New("the protocol not supported")
+	argFields.WithField("error", err).Debug("failed to indentify process of container")
 	return
 }
 
 // SearchInodeFromNetOfPid returns inode from net of a specific pid in proc filesystem.
 func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) {
-	// Select file path
+	argFields := logrus.WithFields(logrus.Fields{
+		"target_socket": socket,
+		"process_id": pid,
+	})
+	argFields.Debug("trying to search inode from net of pid")
+
 	var netFilePath string
 	switch socket.Protocol {
 	case layers.LayerTypeTCP:
@@ -61,24 +80,31 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 	// case layers.LayerTypeICMPv4:
 	// 	netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
 	default:
-		return inode, errors.New("file path not defined")
+		err = errors.New("file path not defined")
+		argFields.WithField("error", err).Debug("failed to search inode from net of pid")
+		return
 	}
 
-	// Read all file
 	var file []byte
 	file, err = ioutil.ReadFile(netFilePath)
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to search inode from net of pid")
 		return
 	}
 
 	// Make local_address and rem_address string
 	socketLocalPort := fmt.Sprintf("%04X", socket.LocalPort)
 	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(socket.RemoteIP), socket.RemotePort)
+	argFields.WithFields(logrus.Fields{
+		"socket_local_port_string": socketLocalPort,
+		"socket_remote_address_string": socketRemoteAddr,
+		}).Trace("the strings for comparison created")
 
 	// Search entry of net  socket
 	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	entryScanner.Scan() // Skip header line
 	for entryScanner.Scan() {
+		argFields.WithField("entry", entryScanner.Text()).Trace("checking the entry")
 		columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 		columnScanner.Split(bufio.ScanWords)
 		var remoteAddr string
@@ -87,76 +113,108 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			switch columnCounter {
 			case 1:
 				if !strings.HasSuffix(columnScanner.Text(), socketLocalPort) {
+					argFields.WithField("net_local_port", columnScanner.Text()).Trace("the entry skipped")
 					break checkColumn
 				}
 			case 2:
 				remoteAddr = columnScanner.Text()
+				argFields.WithField("net_remote_port", remoteAddr).Trace("remote addr scanned")
 			case 9:
-				if strings.HasSuffix(remoteAddr, "0000") {
+				if remoteAddr == socketRemoteAddr {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
+					argFields.WithField("socket_inode", inode).Debug("exact matched inode found")
+					return
+				} else if strings.HasSuffix(remoteAddr, "0000") {
+					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
+					argFields.WithField("socket_inode", inode).Trace("partial matched inode found")
 					if err != nil {
+						argFields.WithField("error", err).Debug("failed to search inode from net of pid")
 						return
 					}
-				} else if remoteAddr == socketRemoteAddr {
-					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					return
 				}
 				break checkColumn
 			}
 		}
 	}
 	if inode != 0 {
+		argFields.WithField("socket_inode", inode).Debug("partial matched inode found")
 		return
 	}
-	return inode, errors.New("inode not found")
+	err = errors.New("inode not found")
+	argFields.WithField("error", err).Debug("failed to search inode from net of pid")
+	return
 }
 
 // SearchProcessOfContainerFromInode gets inode from net of a specific pid in proc filesystem.
 func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
+	argFields := logrus.WithFields(logrus.Fields{
+		"communicated_container": container,
+		"socket_inode": inode,
+	})
+	argFields.Debug("trying to search process of container from inode")
+
 	// Make pidStack
 	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
 	var containerdShimPid int
 	containerdShimPid, err = RetrievePPID(container.Pid)
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to search process of container from inode")
 		return
 	}
+	argFields.WithField("pid_of_containerd_shim", containerdShimPid).Trace("pid of containered-shim retrieved")
 	var childPIDs []int
 	childPIDs, err = RetrieveChildPIDs(containerdShimPid)
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to search process of container from inode")
 		return
 	}
+	argFields.WithField("child_pids_of_containerd_shim", containerdShimPid).Trace("child pids of containered-shim retrieved")
 	var pids pidStack
 	pids.Push(childPIDs...)
 
 	// Check inode of pids
 	for pids.Len() != 0 {
 		pid := pids.Pop()
+		argFields.WithField("poped_pid", pid).Trace("pid poped from pid stack")
 		if SocketInodeExists(pid, inode) {
 			var executable, path string
 			executable, err = RetrieveProcessName(pid)
 			if err != nil {
+				argFields.WithField("error", err).Debug("failed to search process of container from inode")
 				return
 			}
+			argFields.WithField("retrieved_executable", executable).Trace("executable retrieved")
 			path, err = RetrieveProcessPath(pid)
 			if err != nil {
+				argFields.WithField("error", err).Debug("failed to search process of container from inode")
 				return
 			}
-			return &Process{pid, executable, path}, err
+			argFields.WithField("retrieved_path", path).Trace("path retrieved")
+			process = &Process{pid, executable, path}
+			return
 		}
 		childPIDs, err = RetrieveChildPIDs(pid)
 		if err != nil {
+			argFields.WithField("error", err).Debug("failed to search process of container from inode")
 			return
 		}
+		argFields.WithField("retrieved_child_pids", childPIDs).Trace("child_pids retrieved")
 		pids.Push(childPIDs...)
 	}
-	return process, errors.New("process not found")
+	err = errors.New("process not found")
+	argFields.WithField("error", err).Debug("failed to search process of container from inode")
+	return
 }
 
 // RetrievePPID gets the PPID from stat of proc filesystem.
 func RetrievePPID(pid int) (ppid int, err error) {
+	argFields := logrus.WithField("process_id", pid)
+	argFields.Debug("trying to retrieve ppid")
+
 	var file []byte
 	file, err = ioutil.ReadFile(filepath.Join(procPath, strconv.Itoa(pid), "stat"))
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to retrieve ppid")
 		return
 	}
 
