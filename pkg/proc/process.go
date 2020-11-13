@@ -36,8 +36,8 @@ func (p *Process)Equal(x *Process) bool {
 // IdentifyProcessOfContainer returns Process of container from Socket and Container and Packet.
 func IdentifyProcessOfContainer(socket *Socket, container *container.Container, packet *gopacket.Packet) (process *Process, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
-		"target_socket": socket.String(),
-		"communicated_container": container.String(),
+		"target_socket": socket,
+		"communicated_container": container,
 		// "packet": packet,
 	})
 	argFields.Debug("trying to identify process of container")
@@ -54,6 +54,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		if err != nil {
 			argFields.WithField("error", err).Debug("failed to indentify process of container")
 		}
+		argFields.WithField("identified_process", process).Debug("the process identified")
 		return
 	}
 
@@ -66,7 +67,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"target_socket": socket,
-		"process_id": pid,
+		"pid": pid,
 	})
 	argFields.Debug("trying to search inode from net of pid")
 
@@ -208,7 +209,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 
 // RetrievePPID gets the PPID from stat of proc filesystem.
 func RetrievePPID(pid int) (ppid int, err error) {
-	argFields := logrus.WithField("process_id", pid)
+	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve ppid")
 
 	var file []byte
@@ -226,16 +227,21 @@ func RetrievePPID(pid int) (ppid int, err error) {
 			break
 		}
 	}
+	argFields.WithField("retrieved_ppid", ppid).Debug("the ppid retrieved")
 	return
 }
 
 // RetrieveChildPIDs gets child PIDs from children of proc filesystem.
 func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to retrieve child pids")
+
 	pidStr := strconv.Itoa(pid)
 	netFilePath := filepath.Join(procPath, pidStr, "task", pidStr, "children")
 	var file []byte
 	file, err = ioutil.ReadFile(netFilePath)
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to retrieve child pids")
 		return
 	}
 
@@ -244,24 +250,35 @@ func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
 	for scanner.Scan() {
 		pid, err = strconv.Atoi(scanner.Text())
 		if err != nil {
+			argFields.WithField("error", err).Debug("failed to retrieve child pids")
 			return
 		}
+		argFields.WithField("retrieved_child_pid", pid).Trace("child pid retrieved")
 		childPIDs = append(childPIDs, pid)
 	}
+	argFields.WithField("retrieved_child_pids", childPIDs).Debug("the child pids retrieved")
 	return
 }
 
 // SocketInodeExists reports whether the process has socket inode.
 func SocketInodeExists(pid int, inode uint64) bool {
+	argFields := logrus.WithFields(logrus.Fields{
+		"pid": pid,
+		"socket_inode": inode,
+	})
+	argFields.Debug("trying to check whether the process has socket inode")
+
 	inodeStr := strconv.FormatUint(inode, 10)
 	fdDirPath := filepath.Join(procPath, strconv.Itoa(pid), "fd")
 	fdFiles, err := ioutil.ReadDir(fdDirPath)
 	if err != nil {
-			return false
+		argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
+		return false
 	}
 	for _, fdFile := range fdFiles {
 		linkContent, err := os.Readlink(filepath.Join(fdDirPath, fdFile.Name()))
 		if err != nil {
+			argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
 			return false
 		}
 		if !strings.HasPrefix(linkContent, "socket") {
@@ -271,22 +288,35 @@ func SocketInodeExists(pid int, inode uint64) bool {
 			return true
 		}
 	}
+	argFields.WithField("error", "file descriptor with the socket inode not found").Debug("failed to check whether the process has socket inode")
 	return false
 }
 
 // RetrieveProcessName gets the process name from stat of proc filesystem.
 func RetrieveProcessName(pid int) (executable string, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to retrieve process name")
+
 	var commFile []byte
 	commFile, err = ioutil.ReadFile(filepath.Join(procPath, strconv.Itoa(pid), "comm"))
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to retrieve process name")
 		return
 	}
 	executable = strings.TrimSuffix(*(*string)(unsafe.Pointer(&commFile)), "\n")
+	argFields.WithField("executable", executable).Debug("the process name retrieved")
 	return
 }
 
 // RetrieveProcessPath gets the process path from stat of proc filesystem.
 func RetrieveProcessPath(pid int) (path string, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to retrieve process path")
 	path, err = os.Readlink(filepath.Join(procPath, strconv.Itoa(pid), "exe"))
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to retrieve process path")
+		return
+	}
+	argFields.Debug("the process path retrieved")
 	return
 }

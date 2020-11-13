@@ -2,20 +2,25 @@ package proc
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
+	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 )
 
 // Socket is information needed to control network.
 type Socket struct {
-	Protocol   gopacket.LayerType
-	LocalIP    net.IP
-	RemoteIP   net.IP
-	LocalPort  uint16
-	RemotePort uint16
+	Protocol              gopacket.LayerType
+	LocalIP, RemoteIP     net.IP
+	LocalPort, RemotePort uint16
+}
+
+func (s *Socket)String() string {
+	return fmt.Sprintf("{Protocol:%s LocalIP:%s LocalPort:%d RemoteIP:%s RemortPort:%d}",
+		s.Protocol, s.LocalIP, s.LocalPort, s.RemoteIP, s.RemotePort)
 }
 
 type direction bool
@@ -33,11 +38,19 @@ var supportedProtocol []gopacket.LayerType = []gopacket.LayerType{
 
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
 func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
+	argFields := logrus.WithFields(logrus.Fields{
+		"target_packet": packet,
+		"containers": containers,
+	})
+	argFields.Debug("trying to check socket and communicated container")
+
 	// Check the protocol of network layer
 	// This program only supports IPv4
 	ipLayer := (*packet).Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
-		return socket, communicatedContainer, errors.New("packet not contained ipv4 layer")
+		err = errors.New("packet not contained ipv4 layer")
+		argFields.WithField("error", err).Debug("failed to check socket and communicated container")
+		return
 	}
 	ip, _ := ipLayer.(*layers.IPv4)
 
@@ -57,9 +70,10 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 		}
 	}
 	if communicatedContainer == nil {
-		return socket, communicatedContainer, errors.New("communicated container not found")
+		err = errors.New("communicated container not found")
+		argFields.WithField("error", err).Debug("failed to check socket and communicated container")
+		return
 	}
-
 
 	// Check the protocol inside network layer
 	socket.Protocol = ip.NextLayerType()
@@ -81,6 +95,11 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 			socket.LocalPort, socket.RemotePort = uint16(udp.DstPort), uint16(udp.SrcPort)
 		}
 	}
+
+	argFields.WithFields(logrus.Fields{
+		"target_socket": socket,
+		"communicated_container": communicatedContainer,
+		}).Debug("the ppid retrieved")
 	return
 }
 

@@ -5,14 +5,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/tomo-9925/cnet/pkg/runnotify"
-
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/network"
 	"github.com/tomo-9925/cnet/pkg/policy"
 	"github.com/tomo-9925/cnet/pkg/proc"
+	"github.com/tomo-9925/cnet/pkg/runnotify"
 )
 
 const (
