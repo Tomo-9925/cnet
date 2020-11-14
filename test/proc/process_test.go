@@ -17,16 +17,16 @@ func TestProcessEqual(t *testing.T) {
 	}
 
 	if !testProcesses["policyNetcat1"].Equal(testProcesses["detectedNetcat"]) {
-		t.Error("policy netcat 1 not equal detected netcat")
+		t.Error("expected policy netcat 1 not equal detected netcat but actual policy netcat 1 equal detected netcat")
 	}
 	if !testProcesses["policyNetcat2"].Equal(testProcesses["detectedNetcat"]) {
-		t.Error("policy netcat 2 not equal detected netcat")
+		t.Error("expected policy netcat 2 not equal detected netcat but actual policy netcat 2 equal detected netcat")
 	}
-	if testProcesses["differentPathNetcat"].Equal(testProcesses["detectedNetcat"]) {
-		t.Error("different path netcat equal detected netcat")
+	if !testProcesses["differentPathNetcat"].Equal(testProcesses["detectedNetcat"]) {
+		t.Error("expected different path netcat not equal detected netcat but actual different path netcat equal detected netcat")
 	}
 	if !testProcesses["differentExecutableNetcat"].Equal(testProcesses["detectedNetcat"]) {
-		t.Error("different executable netcat not equal detected netcat")
+		t.Error("expected different executable netcat not equal detected netcat but actual different executable netcat equal detected netcat")
 	}
 }
 
