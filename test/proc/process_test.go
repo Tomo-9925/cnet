@@ -9,11 +9,11 @@ import (
 
 func TestProcessEqual(t *testing.T) {
 	var testProcesses map[string]*proc.Process = map[string]*proc.Process{
-		"detectedNetcat": {ID: 9925, Executable: "nc", Path: "/usr/bin/nc"},
+		"detectedNetcat": {ID: 9925, Executable: "nc", Path: "/bin/nc"},
 		"policyNetcat1": {Executable: "nc"},
-		"policyNetcat2": {Path: "/usr/bin/nc"},
+		"policyNetcat2": {Path: "/bin/nc"},
 		"differentPathNetcat": {Executable: "nc", Path: "/usr/local/bin/nc"},
-		"differentExecutableNetcat": {Executable: "telnet", Path: "/usr/bin/nc"},
+		"differentExecutableNetcat": {Executable: "telnet", Path: "/bin/nc"},
 	}
 
 	if !testProcesses["policyNetcat1"].Equal(testProcesses["detectedNetcat"]) {

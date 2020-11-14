@@ -20,14 +20,14 @@ var (
 	// Docker Engine API settings
 	ctx context.Context = context.Background()
 	netcatContainerName string = "cnet_netcat_test"
-	netcatImage string = "docker.io/subfuzion/netcat"
+	netcatImage string = "docker.io/library/busybox"
 	netcatDestination string = "158.217.2.147"
 	netcatPort uint16 = 80
 	netcatContainerConfig *container.Config = types.ContainerCreateConfig{
 			Name: netcatContainerName,
 			Config: &container.Config{
 				Image: netcatImage,
-				Cmd: []string{netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
+				Cmd: []string{"nc", netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
 			},
 	}.Config
 	netcatHostConfig *container.HostConfig = &container.HostConfig{
@@ -128,7 +128,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if communicatedProcess.Executable != "nc" {
 		t.Error("executable not get correctly")
 	}
-	if communicatedProcess.Path != "/usr/bin/nc" {
+	if communicatedProcess.Path != "/bin/nc" {
 		t.Error("path not get correctly")
 	}
 }
