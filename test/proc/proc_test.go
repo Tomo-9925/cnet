@@ -57,7 +57,10 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	io.Copy(os.Stdout, reader)
+	_, err = io.Copy(os.Stdout, reader)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Setting iptables
 	if err := cnetNetwork.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum); err != nil {
