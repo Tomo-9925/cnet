@@ -19,8 +19,8 @@ import (
 
 // Process is information about process needed to analyze communications of container.
 type Process struct {
-	ID                int
-	Executable, Path  string
+	ID               int
+	Executable, Path string
 }
 
 func (p *Process)String() string {
@@ -113,29 +113,24 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 		columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 		columnScanner.Split(bufio.ScanWords)
 		var remoteAddr string
-		checkColumn:
+	checkColumn:
 		for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
 			switch columnCounter {
-			case 1:
+			case localAddressColumn:
 				if !strings.HasSuffix(columnScanner.Text(), socketLocalPort) {
 					argFields.WithField("net_local_port", columnScanner.Text()).Trace("the entry skipped")
 					break checkColumn
 				}
-			case 2:
+			case remoteAddressColumn:
 				remoteAddr = columnScanner.Text()
-				argFields.WithField("net_remote_port", remoteAddr).Trace("remote addr scanned")
-			case 9:
-				if remoteAddr == socketRemoteAddr {
+			case inodeColumn:
+				// Like 00000000:0000
+				if strings.HasSuffix(remoteAddr, "0000") {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					argFields.WithField("socket_inode", inode).Debug("exact matched inode found")
+					return inode, err
+				} else if remoteAddr == socketRemoteAddr {
+					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 					return
-				} else if strings.HasSuffix(remoteAddr, "0000") {
-					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					argFields.WithField("socket_inode", inode).Trace("partial matched inode found")
-					if err != nil {
-						argFields.WithField("error", err).Debug("failed to search inode from net of pid")
-						return
-					}
 				}
 				break checkColumn
 			}
