@@ -8,13 +8,13 @@ import (
 func deinit() {
 	err = network.DeleteNFQueueRule(chainName, protocol, queueNum)
 	if err != nil {
-		errorField.Error("failed to deinit function")
+		logrus.WithField("error", err).Error("failed to delete the nfqueue rule")
 	}
 
 	if !debug {
 		err = logFile.Close()
 		if err != nil {
-			errorField.Error("failed to deinit function")
+			logrus.WithField("error", err).Error("failed to close log file")
 		}
 	}
 

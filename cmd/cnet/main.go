@@ -20,7 +20,7 @@ func main() {
 	var queue *netfilter.NFQueue
 	queue, err = netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
 	if err != nil {
-		errorField.Fatal("failed to bind nfqueue")
+		logrus.WithField("error", err).Fatal("failed to bind nfqueue")
 	}
 	logrus.DeferExitHandler(queue.Close)
 	packets := queue.GetPackets()
@@ -37,7 +37,10 @@ func main() {
 			logrus.WithField("signal", s).Info("signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
-			containerFields := containersField.WithField("container_id", cid)
+			containerFields := logrus.WithFields(logrus.Fields{
+				"container_id": cid,
+				"containers": containers,
+				})
 
 			//Include newly launched containers in the monitoring
 			container, err := container.FetchDockerContainerInspection(cid)
@@ -52,7 +55,7 @@ func main() {
 			if err != nil {
 				containerFields.WithField("error", err).Fatal("failed to parse security policy")
 			}
-			policiesField.Info("security policy data reloaded")
+			logrus.WithField("policies", policies).Info("security policy data reloaded")
 		case cid := <-killCh:
 			//Removing finished containers from monitoring
 			container.RemoveContainerFromSlice(containers, cid)
@@ -72,7 +75,7 @@ func main() {
 			targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				errorField.Warn("the packet with unspecified structure dropped")
+				logrus.WithField("error", err).Warn("the packet with unspecified structure dropped")
 				continue
 			}
 			if !targetSocket.IsSupportProtocol() {
@@ -83,10 +86,10 @@ func main() {
 			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
-				errorField.WithFields(logrus.Fields{
+				logrus.WithField("error", err).WithFields(logrus.Fields{
 					"target_socket": targetSocket,
 					"communicated_container": communicatedContainer,
-					}).Warn(err)
+					}).Warn("the packet with unidentified process dropped")
 				continue
 			}
 			communicationFields := logrus.WithFields(logrus.Fields{

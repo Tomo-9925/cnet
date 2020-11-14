@@ -15,18 +15,26 @@ func init() {
 
 	containers, err = container.FetchDockerContainerInspections()
 	if err != nil {
-		errorField.Fatal("failed to initialize cnet")
+		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}
+	logrus.WithField("containers", containers).Info("container information fetched")
 
 	policies, err = policy.ParseSecurityPolicy(policyPath)
 	if err != nil {
-		errorField.Fatal("failed to initialize cnet")
+		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}
+	logrus.WithField("policies", policies).Info("the security policy loaded")
 
 	err = network.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum)
 	if err != nil {
-		errorField.Fatal("failed to initialize cnet")
+		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}
+	logrus.WithFields(logrus.Fields{
+		"chain_name": chainName,
+		"protocol": protocol,
+		"rule_num": ruleNum,
+		"queue_num": queueNum,
+	}).Info("the nfqueue rule added")
 
 	// Configure logrus
 	if debug {
@@ -41,7 +49,7 @@ func init() {
 			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
 			0666)
 		if err != nil {
-			errorField.Fatal("failed to initialize cnet")
+			logrus.WithField("error", err).Fatal("failed to initialize cnet")
 		}
 		logrus.SetOutput(logFile)
 	}

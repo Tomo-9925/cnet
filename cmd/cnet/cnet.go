@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 
-	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
@@ -27,10 +26,7 @@ const (
 
 var (
 	err             error
-	errorField      *logrus.Entry = logrus.WithField("error", err)
 	logFile         *os.File
 	containers      []*container.Container
-	containersField *logrus.Entry = logrus.WithField("containers", containers)
 	policies        policy.Policies
-	policiesField   *logrus.Entry = logrus.WithField("policies", policies)
 )
