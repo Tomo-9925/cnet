@@ -23,6 +23,10 @@ type Process struct {
 	Executable, Path  string
 }
 
+func (p *Process)String() string {
+	return fmt.Sprintf("{ID:%d Executable:%s Path:%s}", p.ID, p.Executable, p.Path)
+}
+
 // Equal reports whether c and x are the same process.
 func (p *Process)Equal(x *Process) bool {
 	if p.Path != "" && x.Path != "" && p.Path == x.Path {
@@ -169,7 +173,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 		argFields.WithField("error", err).Debug("failed to search process of container from inode")
 		return
 	}
-	argFields.WithField("child_pids_of_containerd_shim", containerdShimPid).Trace("child pids of containered-shim retrieved")
+	argFields.WithField("child_pids_of_containerd_shim", childPIDs).Trace("child pids of containered-shim retrieved")
 	var pids pidStack
 	pids.Push(childPIDs...)
 

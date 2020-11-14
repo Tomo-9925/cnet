@@ -100,7 +100,7 @@ func main() {
 
 	// Hook signal
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	// Hook NFQueue
 	var queue *netfilter.NFQueue

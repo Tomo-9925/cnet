@@ -46,3 +46,6 @@ Temporary Items
 *.out
 # vendor/ # Dependency directories (remove the comment to include it)
 .idea/
+
+# security policy of cmd cnet
+cmd/cnet/*.yml
