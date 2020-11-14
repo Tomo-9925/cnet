@@ -11,7 +11,7 @@ const (
 	debug bool = true
 
 	// File path
-	logFilePath string = "./network.log"
+	logFilePath string = "./cnet.log"
 	policyPath  string = "./policy.yml"
 
 	// iptables settings
