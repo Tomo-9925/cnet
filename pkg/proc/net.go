@@ -52,6 +52,6 @@ func IPtoa(ip net.IP) (ipStr string) {
 		return
 	}
 	ipStr = fmt.Sprintf("%X", buf.Bytes())
-	argFields.WithField("ip_address_string", ipStr).Debug("the the ip address converted")
+	argFields.WithField("ip_address_string", ipStr).Debug("the ip address converted")
 	return
 }

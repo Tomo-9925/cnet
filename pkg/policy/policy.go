@@ -17,10 +17,18 @@ type Policy struct {
 	Communications []*Communication
 }
 
+func (p *Policy)String() string {
+	return fmt.Sprintf("{Container:%s Communications:%v}", p.Container, p.Communications)
+}
+
 // Communication is information about process and socket needed to analyze communications of container.
 type Communication struct {
 	Processes []*proc.Process
 	Sockets   []*Socket
+}
+
+func (c *Communication)String() string {
+	return fmt.Sprintf("{Processes:%v Sockets:%v}", c.Processes, c.Sockets)
 }
 
 // Socket is information about information needed to control network.

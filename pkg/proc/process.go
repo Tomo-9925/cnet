@@ -127,7 +127,7 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			case inodeColumn:
 				if strings.HasSuffix(remoteAddr, "0000") || remoteAddr == socketRemoteAddr {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					argFields.WithField("socket_inode", inode).Debug("exact matched inode found")
+					argFields.WithField("socket_inode", inode).Debug("inode found")
 					return
 				}
 				break checkColumn
