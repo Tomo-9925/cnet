@@ -123,22 +123,16 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 				}
 			case remoteAddressColumn:
 				remoteAddr = columnScanner.Text()
+				argFields.WithField("net_remote_port", remoteAddr).Trace("remote addr scanned")
 			case inodeColumn:
-				// Like 00000000:0000
-				if strings.HasSuffix(remoteAddr, "0000") {
+				if strings.HasSuffix(remoteAddr, "0000") || remoteAddr == socketRemoteAddr {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					return inode, err
-				} else if remoteAddr == socketRemoteAddr {
-					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
+					argFields.WithField("socket_inode", inode).Debug("exact matched inode found")
 					return
 				}
 				break checkColumn
 			}
 		}
-	}
-	if inode != 0 {
-		argFields.WithField("socket_inode", inode).Debug("partial matched inode found")
-		return
 	}
 	err = errors.New("inode not found")
 	argFields.WithField("error", err).Debug("failed to search inode from net of pid")
