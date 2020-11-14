@@ -2,7 +2,7 @@ package proc
 
 const (
 	procPath            string = "/proc"
-	localAddressColumn  uint8 = 1
-	remoteAddressColumn uint8 = 2
-	inodeColumn         uint8 = 9
+	localAddressColumn  int = 1
+	remoteAddressColumn int = 2
+	inodeColumn         int = 9
 )
