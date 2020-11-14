@@ -18,12 +18,12 @@ import (
 
 // Process is information about process needed to analyze communications of container.
 type Process struct {
-	ID                int
-	Executable, Path  string
+	ID               int
+	Executable, Path string
 }
 
 // Equal reports whether c and x are the same process.
-func (p *Process)Equal(x *Process) bool {
+func (p *Process) Equal(x *Process) bool {
 	if p.Path != "" && x.Path != "" {
 		if p.Path == x.Path {
 			return true
@@ -85,21 +85,20 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 		columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 		columnScanner.Split(bufio.ScanWords)
 		var remoteAddr string
-		checkColumn:
+	checkColumn:
 		for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
 			switch columnCounter {
-			case 1:
+			case localAddressColumn:
 				if !strings.HasSuffix(columnScanner.Text(), socketLocalPort) {
 					break checkColumn
 				}
-			case 2:
+			case remoteAddressColumn:
 				remoteAddr = columnScanner.Text()
-			case 9:
+			case inodeColumn:
+				// Like 00000000:0000
 				if strings.HasSuffix(remoteAddr, "0000") {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
-					if err != nil {
-						return
-					}
+					return inode, err
 				} else if remoteAddr == socketRemoteAddr {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 					return
@@ -202,7 +201,7 @@ func SocketInodeExists(pid int, inode uint64) bool {
 	fdDirPath := filepath.Join(procPath, strconv.Itoa(pid), "fd")
 	fdFiles, err := ioutil.ReadDir(fdDirPath)
 	if err != nil {
-			return false
+		return false
 	}
 	for _, fdFile := range fdFiles {
 		linkContent, err := os.Readlink(filepath.Join(fdDirPath, fdFile.Name()))
