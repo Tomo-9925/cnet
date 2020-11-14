@@ -40,7 +40,7 @@ func init() {
 	if debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
-		// Writing to the file in the production environment only
+		// Writing to a file in production environment only
 		logrus.SetFormatter(&logrus.TextFormatter{
 			DisableColors: true,
 			FullTimestamp: true,

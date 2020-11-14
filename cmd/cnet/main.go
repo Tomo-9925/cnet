@@ -34,7 +34,7 @@ func main() {
 	for {
 		select {
 		case s := <-sig:
-			logrus.WithField("signal", s).Info("signal received")
+			logrus.WithField("signal", s).Info("the signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
 			containerFields := logrus.WithFields(logrus.Fields{
@@ -48,14 +48,14 @@ func main() {
 				containerFields.WithField("error", err).Fatal("failed to fetch docker container inspection")
 			}
 			containers = append(containers, container)
-			containerFields.Info("container information added")
+			containerFields.Info("the container information added")
 
 			// Reload security policy data
 			policies, err = policy.ParseSecurityPolicy(policyPath)
 			if err != nil {
 				containerFields.WithField("error", err).Fatal("failed to parse security policy")
 			}
-			logrus.WithField("policies", policies).Info("security policy data reloaded")
+			logrus.WithField("policies", policies).Info("the security policy data reloaded")
 		case cid := <-killCh:
 			//Removing finished containers from monitoring
 			container.RemoveContainerFromSlice(containers, cid)
@@ -66,7 +66,7 @@ func main() {
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:
-			logrus.WithField("packet", p).Debug("packet received")
+			logrus.WithField("packet", p).Debug("the packet received")
 			var (
 				targetSocket          *proc.Socket
 				communicatedContainer *container.Container
