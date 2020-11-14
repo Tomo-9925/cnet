@@ -2,7 +2,9 @@ package proc_test
 
 import (
 	"context"
+	"io"
 	"net"
+	"os"
 	"strconv"
 	"testing"
 
@@ -21,12 +23,13 @@ var (
 	ctx context.Context = context.Background()
 	netcatContainerName string = "cnet_netcat_test"
 	netcatImage string = "docker.io/library/busybox"
+	netcatImageName string = "busybox"
 	netcatDestination string = "158.217.2.147"
 	netcatPort uint16 = 80
 	netcatContainerConfig *container.Config = types.ContainerCreateConfig{
 			Name: netcatContainerName,
 			Config: &container.Config{
-				Image: netcatImage,
+				Image: netcatImageName,
 				Cmd: []string{"nc", netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
 			},
 	}.Config
@@ -50,12 +53,13 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = cli.ImagePull(ctx, netcatImage, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, netcatImage, types.ImagePullOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
+	io.Copy(os.Stdout, reader)
 
-		// Setting iptables
+	// Setting iptables
 	if err := cnetNetwork.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum); err != nil {
 		t.Fatal(err)
 	}
