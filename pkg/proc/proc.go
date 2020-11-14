@@ -5,7 +5,7 @@ const (
 )
 
 const (
-	localAddressColumn  int = 1
-	remoteAddressColumn     = 2
-	inodeColumn             = 9
+	localAddressColumn  uint8 = 1
+	remoteAddressColumn uint8 = 2
+	inodeColumn         uint8 = 9
 )
