@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/k0kubun/pp"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
@@ -35,26 +34,26 @@ func TestRetrievePIDFunctions(t *testing.T) {
 	thisPID := os.Getpid()
 	thisPPID := os.Getppid()
 
-	thisExecutable, err := proc.RetrieveProcessName(thisPID)
-  if err != nil {
-    t.Error(err)
-  }
-	thisPath, err := proc.RetrieveProcessPath(thisPID)
-  if err != nil {
-    t.Error(err)
-  }
-	thisParentExecutable, err := proc.RetrieveProcessName(thisPPID)
-  if err != nil {
-    t.Error(err)
-  }
-	thisParentPath, err := proc.RetrieveProcessPath(thisPPID)
-  if err != nil {
-    t.Error(err)
-  }
-	pp.Println(map[string]proc.Process{
-		"ThisProcess": {ID: thisPID, Executable: thisExecutable, Path:thisPath},
-		"ThisParentProcess": {ID: thisPPID, Executable: thisParentExecutable, Path:thisParentPath},
-	})
+	// thisExecutable, err := proc.RetrieveProcessName(thisPID)
+  // if err != nil {
+  //   t.Error(err)
+  // }
+	// thisPath, err := proc.RetrieveProcessPath(thisPID)
+  // if err != nil {
+  //   t.Error(err)
+  // }
+	// thisParentExecutable, err := proc.RetrieveProcessName(thisPPID)
+  // if err != nil {
+  //   t.Error(err)
+  // }
+	// thisParentPath, err := proc.RetrieveProcessPath(thisPPID)
+  // if err != nil {
+  //   t.Error(err)
+  // }
+	// pp.Println(map[string]proc.Process{
+	// 	"ThisProcess": {ID: thisPID, Executable: thisExecutable, Path:thisPath},
+	// 	"ThisParentProcess": {ID: thisPPID, Executable: thisParentExecutable, Path:thisParentPath},
+	// })
 
 	retrievedPPID, err := proc.RetrievePPID(thisPID)
 	if err != nil {

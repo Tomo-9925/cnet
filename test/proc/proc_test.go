@@ -59,7 +59,12 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err := cnetNetwork.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum); err != nil {
 		t.Fatal(err)
 	}
-	defer cnetNetwork.DeleteNFQueueRule(chainName, protocol, queueNum)
+	defer func(){
+		err := cnetNetwork.DeleteNFQueueRule(chainName, protocol, queueNum)
+		if err != nil {
+			t.Fatal(err)
+		}
+		}()
 
 	// Setting NFQueue
 	queue, err := netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
@@ -78,7 +83,12 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err := cli.ContainerStart(ctx, apiResp.ID, types.ContainerStartOptions{}); err != nil{
 		t.Fatal(err)
 	}
-	defer cli.ContainerStop(ctx, apiResp.ID, nil)
+	defer func(){
+		err := cli.ContainerStop(ctx, apiResp.ID, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		}()
 
 	// Get container information
 	inspect, err := cli.ContainerInspect(ctx, apiResp.ID)
