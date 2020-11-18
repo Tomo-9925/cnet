@@ -34,6 +34,7 @@ func TestRetrievePIDFunctions(t *testing.T) {
 	thisPID := os.Getpid()
 	thisPPID := os.Getppid()
 
+  // NOTE: RetrieveChildPIDs is the function for retrieving child processes of a process in a container. The exact child process may not get, so remove comment out when it becomes necessary to rebuild the function.
 	// thisExecutable, err := proc.RetrieveProcessName(thisPID)
   // if err != nil {
   //   t.Error(err)
@@ -63,7 +64,6 @@ func TestRetrievePIDFunctions(t *testing.T) {
 		t.Error("retrieved ppid not equal this ppid")
 	}
 
-  // NOTE: RetrieveChildPIDs is the function for retrieving child processes of a process in a container.
   // retrievedChildPIDs, err := proc.RetrieveChildPIDs(thisPPID)
 	// if err != nil {
 	// 	t.Fatal(err)

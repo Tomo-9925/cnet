@@ -37,12 +37,11 @@ func main() {
 			logrus.WithField("signal", s).Info("the signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
+			//Include newly launched containers in the monitoring
 			containerFields := logrus.WithFields(logrus.Fields{
 				"container_id": cid,
 				"containers": containers,
 				})
-
-			//Include newly launched containers in the monitoring
 			container, err := container.FetchDockerContainerInspection(cid)
 			if err != nil {
 				containerFields.WithField("error", err).Fatal("failed to fetch docker container inspection")
@@ -103,7 +102,7 @@ func main() {
 				continue
 			}
 			p.SetVerdict(netfilter.NF_ACCEPT)
-			communicationFields.Debug("the defined packet accepted")
+			communicationFields.Info("the defined packet accepted")
 		}
 	}
 }

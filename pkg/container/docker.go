@@ -62,12 +62,8 @@ func FetchDockerContainerInspection(cid string) (container *Container, err error
 	}
 
 	cidField.WithField("container_inspection", inspect).Debug("container inspection fetched")
-	return &Container{
-		ID:   inspect.ID,
-		IP:   net.ParseIP(inspect.NetworkSettings.IPAddress),
-		Name: inspect.Name,
-		Pid:  inspect.State.Pid,
-	}, err
+	container = &Container{inspect.ID, net.ParseIP(inspect.NetworkSettings.IPAddress), inspect.Name, inspect.State.Pid}
+	return
 }
 
 // RemoveContainerFromSlice removes container information from slice.

@@ -30,9 +30,9 @@ func (s *pidStack) Pop() (pid int) {
 	if s.size > 0 {
 		pid, s.top = s.top.pid, s.top.next
 		s.size--
-		logrus.WithField("pid_stack", s).Debug("pid poped")
+		logrus.WithField("pid_stack", s).Debug("pid popped")
 		return
 	}
-	logrus.WithField("pid_stack", s).Debug("pid not poped")
+	logrus.WithField("pid_stack", s).Debug("pid not popped")
 	return -1
 }

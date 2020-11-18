@@ -69,7 +69,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	defer func(){
 		err := cnetNetwork.DeleteNFQueueRule(chainName, protocol, queueNum)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		}()
 
@@ -93,7 +93,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	defer func(){
 		err := cli.ContainerStop(ctx, apiResp.ID, nil)
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		}()
 

@@ -33,10 +33,9 @@ func (c *Communication)String() string {
 
 // Socket is information about information needed to control network.
 type Socket struct {
-	Protocol   gopacket.LayerType
-	RemoteIP   *net.IPNet
-	LocalPort  uint16
-	RemotePort uint16
+	Protocol              gopacket.LayerType
+	RemoteIP              *net.IPNet
+	LocalPort, RemotePort uint16
 }
 
 func (s *Socket)String() string {

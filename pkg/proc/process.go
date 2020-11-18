@@ -29,12 +29,7 @@ func (p *Process)String() string {
 
 // Equal reports whether c and x are the same process.
 func (p *Process)Equal(x *Process) bool {
-	if p.Path != "" && x.Path != "" && p.Path == x.Path {
-		return true
-	} else if p.Executable != "" && x.Executable != "" && p.Executable == x.Executable {
-		return true
-	}
-	return false
+	return (p.Path != "" && x.Path != "" && p.Path == x.Path) || ( p.Executable != "" && x.Executable != "" && p.Executable == x.Executable)
 }
 
 // IdentifyProcessOfContainer returns Process of container from Socket and Container and Packet.
@@ -42,7 +37,6 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 	argFields := logrus.WithFields(logrus.Fields{
 		"target_socket": socket,
 		"communicated_container": container,
-		// "packet": packet,
 	})
 	argFields.Debug("trying to identify process of container")
 
@@ -60,6 +54,8 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		}
 		argFields.WithField("identified_process", process).Debug("the process identified")
 		return
+	case layers.LayerTypeICMPv4:
+		logrus.Debugln("identify process of icmpv4 packet not implemented")
 	}
 
 	err = errors.New("the protocol not supported")
@@ -125,6 +121,7 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 				remoteAddr = columnScanner.Text()
 				argFields.WithField("net_remote_port", remoteAddr).Trace("remote addr scanned")
 			case inodeColumn:
+				// server process makes 00000000:0000 rem_address entry
 				if strings.HasSuffix(remoteAddr, "0000") || remoteAddr == socketRemoteAddr {
 					inode, err = strconv.ParseUint(columnScanner.Text(), 10, 64)
 					argFields.WithField("socket_inode", inode).Debug("inode found")
@@ -169,7 +166,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 	// Check inode of pids
 	for pids.Len() != 0 {
 		pid := pids.Pop()
-		argFields.WithField("poped_pid", pid).Trace("pid poped from pid stack")
+		argFields.WithField("popped_pid", pid).Trace("pid popped from pid stack")
 		if SocketInodeExists(pid, inode) {
 			var executable, path string
 			executable, err = RetrieveProcessName(pid)
