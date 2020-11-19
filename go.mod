@@ -1,6 +1,6 @@
 module github.com/tomo-9925/cnet
 
-go 1.14
+go 1.15
 
 require (
 	github.com/AkihiroSuda/go-netfilter-queue v0.0.0-20180724014230-5b02f804b4f2
@@ -15,6 +15,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.7.0
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/sys v0.0.0-20201113233024-12cec1faf1ba // indirect
+	golang.org/x/sys v0.0.0-20201118182958-a01c418693c7 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )
