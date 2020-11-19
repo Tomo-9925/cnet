@@ -46,3 +46,7 @@ Temporary Items
 *.out
 # vendor/ # Dependency directories (remove the comment to include it)
 .idea/
+
+# cnet
+cmd/cnet/*.yml
+cmd/cnet/*.log

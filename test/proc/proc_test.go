@@ -2,7 +2,9 @@ package proc_test
 
 import (
 	"context"
+	"io"
 	"net"
+	"os"
 	"strconv"
 	"testing"
 
@@ -20,14 +22,15 @@ var (
 	// Docker Engine API settings
 	ctx context.Context = context.Background()
 	netcatContainerName string = "cnet_netcat_test"
-	netcatImage string = "docker.io/subfuzion/netcat"
+	netcatImage string = "docker.io/library/busybox"
+	netcatImageName string = "busybox"
 	netcatDestination string = "158.217.2.147"
 	netcatPort uint16 = 80
 	netcatContainerConfig *container.Config = types.ContainerCreateConfig{
 			Name: netcatContainerName,
 			Config: &container.Config{
-				Image: netcatImage,
-				Cmd: []string{netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
+				Image: netcatImageName,
+				Cmd: []string{"nc", netcatDestination, strconv.FormatUint(uint64(netcatPort), 10)},  // Web Server of Kansai University
 			},
 	}.Config
 	netcatHostConfig *container.HostConfig = &container.HostConfig{
@@ -50,16 +53,25 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = cli.ImagePull(ctx, netcatImage, types.ImagePullOptions{})
+	reader, err := cli.ImagePull(ctx, netcatImage, types.ImagePullOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(os.Stdout, reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-		// Setting iptables
+	// Setting iptables
 	if err := cnetNetwork.InsertNFQueueRule(chainName, protocol, ruleNum, queueNum); err != nil {
 		t.Fatal(err)
 	}
-	defer cnetNetwork.DeleteNFQueueRule(chainName, protocol, queueNum)
+	defer func(){
+		err := cnetNetwork.DeleteNFQueueRule(chainName, protocol, queueNum)
+		if err != nil {
+			t.Error(err)
+		}
+		}()
 
 	// Setting NFQueue
 	queue, err := netfilter.NewNFQueue(queueNum, maxPacketsInQueue, netfilter.NF_DEFAULT_PACKET_SIZE)
@@ -78,7 +90,12 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err := cli.ContainerStart(ctx, apiResp.ID, types.ContainerStartOptions{}); err != nil{
 		t.Fatal(err)
 	}
-	defer cli.ContainerStop(ctx, apiResp.ID, nil)
+	defer func(){
+		err := cli.ContainerStop(ctx, apiResp.ID, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		}()
 
 	// Get container information
 	inspect, err := cli.ContainerInspect(ctx, apiResp.ID)
@@ -118,7 +135,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if communicatedProcess.Executable != "nc" {
 		t.Error("executable not get correctly")
 	}
-	if communicatedProcess.Path != "/usr/bin/nc" {
+	if communicatedProcess.Path != "/bin/nc" {
 		t.Error("path not get correctly")
 	}
 }

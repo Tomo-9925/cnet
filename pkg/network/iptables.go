@@ -15,14 +15,15 @@ const (
 
 // InsertNFQueueRule insert NFQueue rule in the specified chain and rule number.
 func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) (err error) {
-	argFields := logrus.Fields{
-		"chainName": chainName,
+	argFields := logrus.WithFields(logrus.Fields{
+		"chain_name": chainName,
 		"protocol":  protocol,
-		"ruleNum": ruleNum,
-		"queueNum":  queueNum,
-	}
+		"rule_num": ruleNum,
+		"queue_num":  queueNum,
+	})
+	argFields.Debug("trying to insert nfqueue rule")
 	if ExistsNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("nfqueue is exists")
+		argFields.Debug("the nfqueue rule existed, so iptables setting not changed")
 		return
 	}
 	var out []byte
@@ -34,21 +35,22 @@ func InsertNFQueueRule(chainName, protocol string, ruleNum, queueNum uint16) (er
 		"--queue-num", strconv.Itoa(int(queueNum)),
 	).CombinedOutput()
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to insert the nfqueue rule")
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("nfqueue is inserted")
+	argFields.Debug("the nfqueue rule inserted")
 	return
 }
 
 // DeleteNFQueueRule delete NFQueue rule in the specified chain.
 func DeleteNFQueueRule(chainName, protocol string, queueNum uint16) (err error) {
-	argFields := logrus.Fields{
+	argFields := logrus.WithFields(logrus.Fields{
 		"chainName": chainName,
 		"protocol":  protocol,
 		"queueNum":  queueNum,
-	}
+	})
 	if !ExistsNFQueueRule(chainName, protocol, queueNum) {
-		logrus.WithFields(argFields).Debug("nfqueue is not exists")
+		argFields.Debug("the nfqueue rule existed, so iptables setting not changed")
 		return
 	}
 	var out []byte
@@ -60,9 +62,10 @@ func DeleteNFQueueRule(chainName, protocol string, queueNum uint16) (err error) 
 		"--queue-num", strconv.Itoa(int(queueNum)),
 	).CombinedOutput()
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to delete the nfqueue rule")
 		return errors.New(*(*string)(unsafe.Pointer(&out)))
 	}
-	logrus.WithFields(argFields).Debug("nfqueue is deleted")
+	argFields.Debug("the nfqueue rule deleted")
 	return
 }
 
@@ -76,5 +79,11 @@ func ExistsNFQueueRule(chainName, protocol string, queueNum uint16) (exist bool)
 		"--queue-num", strconv.Itoa(int(queueNum)),
 	).Run()
 	exist = err == nil
+	logrus.WithFields(logrus.Fields{
+		"chain_name": chainName,
+		"protocol": protocol,
+		"queue_num": queueNum,
+		"exist": exist,
+	}).Debug("nfqueue rule exist checked")
 	return
 }

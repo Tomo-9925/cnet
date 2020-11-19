@@ -1,6 +1,6 @@
 policies:
   - container:
-      name: "test_nginx"
+      name: "nginx_test"
     communications:
       - processes:
           - path: "/usr/sbin/nginx"

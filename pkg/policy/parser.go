@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/google/gopacket/layers"
+	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/proc"
 	"gopkg.in/yaml.v2"
@@ -34,17 +35,20 @@ type yamlPolicies struct {
 
 // ParseSecurityPolicy return the information slice of policy.
 func ParseSecurityPolicy(path string) (policies Policies, err error) {
-	// Read security policies
+	pathField := logrus.WithField("path", path)
+	pathField.Debug("trying to parse security policy")
+
 	var rawPolicyData []byte
 	rawPolicyData, err = ioutil.ReadFile(path)
 	if err != nil {
+		pathField.WithField("error", err).Debug("failed to parse security policy")
 		return
 	}
 
-	// Parse to yamlPolicies
 	var yamlData yamlPolicies
 	err = yaml.Unmarshal(rawPolicyData, &yamlData)
 	if err != nil {
+		pathField.WithField("error", err).Debug("failed to parse security policy")
 		return
 	}
 
@@ -81,6 +85,7 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 				if strings.Contains(yamlSocket.RemoteIP, "/") {
 					_, socket.RemoteIP, err = net.ParseCIDR(yamlSocket.RemoteIP)
 					if err != nil {
+						pathField.WithField("error", err).Debug("failed to parse security policy")
 						return
 					}
 				} else {
@@ -92,5 +97,7 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 		}
 		parsedPolicies = append(parsedPolicies, &parsedPolicy)
 	}
+
+	pathField.WithField("parsed_policies", parsedPolicies).Debug("security policy parsed")
 	return parsedPolicies, err
 }

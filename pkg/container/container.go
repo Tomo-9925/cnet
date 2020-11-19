@@ -1,6 +1,7 @@
 package container
 
 import (
+	"fmt"
 	"net"
 	"strings"
 )
@@ -27,8 +28,12 @@ func (c *Container) Equal(x *Container) bool {
 	hasSlash := [2]bool{c.Name[0]=='/', x.Name[0]=='/'}
 	if hasSlash[0] == hasSlash[1] {
 		return c.Name == x.Name
-	} else if hasSlash[0] == true {
+	} else if hasSlash[0] {
 		return c.Name[1:] == x.Name
 	}
 	return c.Name == x.Name[1:]
+}
+
+func (c *Container)String() string {
+	return fmt.Sprintf("{ID:%s Name:%s}", c.ID, c.Name)
 }

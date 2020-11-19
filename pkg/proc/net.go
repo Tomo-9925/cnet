@@ -25,13 +25,18 @@ func init() {
 	default:
 		logrus.Fatalln("native endianness not determined")
 	}
+	logrus.WithField("host_byte_order", HostByteOrder).Debug("host byte order checked")
 }
 
-// IPtoa converts IP into string for net
+// IPtoa converts IP address into string for net
 func IPtoa(ip net.IP) (ipStr string) {
+	argFields := logrus.WithField("ip_address", ip)
+	argFields.Debug("trying to convert the ip address into string for net")
+
 	ipv4 := ip.To4()
 	// IPv6 not supported
 	if ipv4 == nil {
+		argFields.WithField("message", "ipv6 not supported").Debug("failed to convert ip address into string for net")
 		return
 	}
 
@@ -40,8 +45,13 @@ func IPtoa(ip net.IP) (ipStr string) {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, HostByteOrder, uint32(ipv4Int.Uint64()))
 	if err != nil {
+		argFields.WithFields(logrus.Fields{
+			"error": err,
+			"ipv4_int": ipv4Int,
+			}).Debug("trying to convert ip address into string for net")
 		return
 	}
 	ipStr = fmt.Sprintf("%X", buf.Bytes())
+	argFields.WithField("ip_address_string", ipStr).Debug("the ip address converted")
 	return
 }

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/google/gopacket/layers"
-	"github.com/k0kubun/pp"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
@@ -35,13 +34,11 @@ func TestSocketIsDefined(t *testing.T) {
 				if satisfyContainer && satisfyProcess && satisfySocket {
 					if !expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
 						t.Error("defined test communication not passed")
-						pp.Println(targetContainer, targetProcess, targetSocket)
 					}
 					continue
 				}
 				if expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
 					t.Error("undefined test communication passed:")
-					pp.Println(targetContainer, targetProcess, targetSocket)
 				}
 			}
 		}
