@@ -38,7 +38,7 @@ func init() {
 
 	// Configure logrus
 	if debug {
-		logrus.SetLevel(logrus.DebugLevel)
+		logrus.SetLevel(logrus.TraceLevel)
 	} else {
 		// Writing to a file in production environment only
 		logrus.SetFormatter(&logrus.TextFormatter{

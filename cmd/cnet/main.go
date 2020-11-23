@@ -77,11 +77,11 @@ func main() {
 				logrus.WithField("error", err).Warn("the packet with unspecified structure dropped")
 				continue
 			}
-			if !targetSocket.IsSupportProtocol() {
-				p.SetVerdict(netfilter.NF_ACCEPT)
-				logrus.WithField("target_socket", targetSocket).Warn("the packet with unsupported protocol accepted")
-				continue
-			}
+			// if !targetSocket.IsSupportProtocol() {
+			// 	p.SetVerdict(netfilter.NF_ACCEPT)
+			// 	logrus.WithField("target_socket", targetSocket).Warn("the packet with unsupported protocol accepted")
+			// 	continue
+			// }
 			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)

@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -55,7 +57,24 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		argFields.WithField("identified_process", process).Debug("the process identified")
 		return
 	case layers.LayerTypeICMPv4:
-		logrus.Debugln("identify process of icmpv4 packet not implemented")
+		logrus.Traceln("trying to identify process of icmpv4 packet")
+		var typeCode layers.ICMPv4TypeCode
+		var identifer uint16
+		typeCode, identifer, err = CheckTypeCodeAndIdentiferOfICMPv4(packet)
+		if err == nil {
+			icmpFields := logrus.Fields{
+				"type_code": typeCode,
+				"identifer": identifer,
+			}
+			process, err = SearchProcessOfContainerFromNSpid(container, identifer)
+			if err == nil {
+				argFields.WithFields(icmpFields).Debug("the process identified")
+				return
+			}
+		}
+		fallthrough
+	default:
+
 	}
 
 	err = errors.New("the protocol not supported")
@@ -136,13 +155,13 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 	return
 }
 
-// SearchProcessOfContainerFromInode gets inode from net of a specific pid in proc filesystem.
-func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
+func searchProcessOfContainerBasedOnConditionalFunction(container *container.Container, keyword string, conditionalFunction func(int, string) bool) (process *Process, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"communicated_container": container,
-		"socket_inode": inode,
+		"keyword": keyword,
+		"conditional_function": runtime.FuncForPC(reflect.ValueOf(conditionalFunction).Pointer()).Name(),
 	})
-	argFields.Debug("trying to search process of container from inode")
+	argFields.Debug("trying to search process of container with the conditional function")
 
 	// Make pidStack
 	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
@@ -167,21 +186,8 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 	for pids.Len() != 0 {
 		pid := pids.Pop()
 		argFields.WithField("popped_pid", pid).Trace("pid popped from pid stack")
-		if SocketInodeExists(pid, inode) {
-			var executable, path string
-			executable, err = RetrieveProcessName(pid)
-			if err != nil {
-				argFields.WithField("error", err).Debug("failed to search process of container from inode")
-				return
-			}
-			argFields.WithField("retrieved_executable", executable).Trace("executable retrieved")
-			path, err = RetrieveProcessPath(pid)
-			if err != nil {
-				argFields.WithField("error", err).Debug("failed to search process of container from inode")
-				return
-			}
-			argFields.WithField("retrieved_path", path).Trace("path retrieved")
-			process = &Process{pid, executable, path}
+		if conditionalFunction(pid, keyword) {
+			process, err = MakeProcessStruct(pid)
 			return
 		}
 		childPIDs, err = RetrieveChildPIDs(pid)
@@ -194,6 +200,40 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 	}
 	err = errors.New("process not found")
 	argFields.WithField("error", err).Debug("failed to search process of container from inode")
+	return
+}
+
+// SearchProcessOfContainerFromInode gets inode from net of a specific pid in proc filesystem.
+func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
+	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(inode, 10), SocketInodeExists)
+}
+
+// SearchProcessOfContainerFromNSpid gets inode
+func SearchProcessOfContainerFromNSpid(container *container.Container, nspid uint16) (process *Process, err error) {
+	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(uint64(nspid), 10), NSpidExists)
+}
+
+// MakeProcessStruct return Process struct of specified pid.
+func MakeProcessStruct(pid int) (process *Process, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to make process struct")
+
+	var executable, path string
+	executable, err = RetrieveProcessName(pid)
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to make process struct")
+		return
+	}
+	argFields.WithField("retrieved_executable", executable).Trace("executable retrieved")
+	path, err = RetrieveProcessPath(pid)
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to make process struct")
+		return
+	}
+	argFields.WithField("retrieved_path", path).Trace("path retrieved")
+
+	process = &Process{pid, executable, path}
+	argFields.WithField("process", process).Debug("the process struct made")
 	return
 }
 
@@ -251,14 +291,13 @@ func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
 }
 
 // SocketInodeExists reports whether the process has socket inode.
-func SocketInodeExists(pid int, inode uint64) bool {
+func SocketInodeExists(pid int, inodeStr string) bool {
 	argFields := logrus.WithFields(logrus.Fields{
 		"pid": pid,
-		"socket_inode": inode,
+		"socket_inode": inodeStr,
 	})
 	argFields.Debug("trying to check whether the process has socket inode")
 
-	inodeStr := strconv.FormatUint(inode, 10)
 	fdDirPath := filepath.Join(procPath, strconv.Itoa(pid), "fd")
 	fdFiles, err := ioutil.ReadDir(fdDirPath)
 	if err != nil {
@@ -279,6 +318,35 @@ func SocketInodeExists(pid int, inode uint64) bool {
 		}
 	}
 	argFields.WithField("error", "file descriptor with the socket inode not found").Debug("failed to check whether the process has socket inode")
+	return false
+}
+
+// SocketInodeExists reports whether the process has namespace process id.
+func NSpidExists(pid int, nspidStr string) bool {
+	argFields := logrus.WithFields(logrus.Fields{
+		"pid": pid,
+		"nspid": nspidStr,
+	})
+	argFields.Debug("trying to check whether the process has namespace process id")
+
+	var file []byte
+	file, err := ioutil.ReadFile(filepath.Join(procPath, strconv.Itoa(pid), "status"))
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to check whether the process has nspid")
+		return false
+	}
+	rowScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
+	for rowScanner.Scan() {
+		rowText := rowScanner.Text()
+		if strings.HasPrefix(rowText, "NSpid") {
+			if strings.HasSuffix(rowText, nspidStr) {
+				return true
+			}
+			break
+		}
+	}
+
+	argFields.WithField("error", "nspid not found").Debug("failed to check whether the process has namespace process id")
 	return false
 }
 

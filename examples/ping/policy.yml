@@ -1,0 +1,9 @@
+policies:
+  - container:
+      name: "ping_test"
+    communications:
+      - processes:
+          - path: "/usr/bin/ping"
+          - path: "/usr/sbin/ping"
+        sockets:
+          - protocol: "icmpv4"
