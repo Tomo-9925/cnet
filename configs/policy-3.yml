@@ -1,0 +1,16 @@
+# 正常系テスト ポリシーに記載のないシステムは通信できないこと
+# (server)> docker run -it -d -p 8080:80 --name nginx_test python
+# (nginx_test)> python -m http.server 80
+# (local)> curl {serverIP}:8080
+
+policies:
+  - container:
+      name: "nginx_test"
+    communications:
+      - processes:
+          - path: "/usr/sbin/nginx"
+        sockets:
+          - protocol: "tcp"
+            local_port: 80
+          - protocol: "tcp"
+            local_port: 443

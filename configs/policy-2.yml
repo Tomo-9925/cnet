@@ -1,0 +1,25 @@
+# 正常系テスト ポリシー・コンテナが複数存在しても問題なく通信が行えること
+# (server)> docker run -it -d -p 8080:80 -p 8443:443 --name nginx_test nginx
+# (server)> docker run -it -d -p 8081:80 -p 8443:443 --name nginx_test_2 nginx
+# (local)> curl {serverIP}:8080
+# (local)> curl {serverIP}:8443
+
+policies:
+  - container:
+      name: "nginx_test"
+    communications:
+      - processes:
+          - path: "/usr/sbin/nginx"
+        sockets:
+          - protocol: "tcp"
+            local_port: 80
+          - protocol: "tcp"
+            local_port: 443
+  - container:
+      name: "nginx_test_2"
+    communications:
+      - processes:
+          - path: "/usr/sbin/nginx"
+        sockets:
+          - protocol: "tcp"
+            local_port: 80

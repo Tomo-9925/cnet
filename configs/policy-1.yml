@@ -1,0 +1,16 @@
+# 正常系テスト 通信が許可されている場合通信ができること
+# (server)> docker run -it -d -p 8080:80 -p 8443:443  --name nginx_test
+# (local)> curl {serverIP}:8080
+# (local)> curl {serverIP}:8443
+
+policies:
+  - container:
+      name: "nginx_test"
+    communications:
+      - processes:
+          - path: "/usr/sbin/nginx"
+        sockets:
+          - protocol: "tcp"
+            local_port: 80
+          - protocol: "tcp"
+            local_port: 443
