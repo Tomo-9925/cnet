@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -12,6 +13,37 @@ import (
 func init() {
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logrus.SetOutput(os.Stdout)
+
+	var logLevelFlag *string
+	var defaultLogLevel string
+
+	if debug {
+		defaultLogLevel = "DEBUG"
+	} else {
+		defaultLogLevel = "INFO"
+	}
+
+	logLevelFlag = flag.String("logLevel", defaultLogLevel, "specify logLevel")
+	flag.Parse()
+	switch *logLevelFlag {
+	case "FATAL":
+		logLevel = logrus.FatalLevel
+	case "ERROR":
+		logLevel = logrus.ErrorLevel
+	case "WARN":
+		logLevel = logrus.WarnLevel
+	case "INFO":
+		logLevel = logrus.InfoLevel
+	case "DEBUG":
+		logLevel = logrus.DebugLevel
+	case "TRACE":
+		logLevel = logrus.TraceLevel
+	default:
+		logrus.WithField("logLevelFlag", *logLevelFlag).Fatal("the specified logLevel does not exist")
+	}
+
+	// Configure logrus
+	logrus.SetLevel(logLevel)
 
 	containers, err = container.FetchDockerContainerInspections()
 	if err != nil {
@@ -31,15 +63,12 @@ func init() {
 	}
 	logrus.WithFields(logrus.Fields{
 		"chain_name": chainName,
-		"protocol": protocol,
-		"rule_num": ruleNum,
-		"queue_num": queueNum,
+		"protocol":   protocol,
+		"rule_num":   ruleNum,
+		"queue_num":  queueNum,
 	}).Info("the nfqueue rule added")
 
-	// Configure logrus
-	if debug {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
+	if !debug {
 		// Writing to a file in production environment only
 		logrus.SetFormatter(&logrus.TextFormatter{
 			DisableColors: true,
