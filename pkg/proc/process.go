@@ -77,12 +77,12 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		fallthrough
 	default:
 		var inodes []uint64
-		inodes, err = RetrieveAllInodeFromNetOfPid(container.Pid)
+		inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid)
 		if err != nil {
 			argFields.WithField("error", err).Debug("failed to identify process of container")
 			return
 		}
-		var suspiciousProcesses map[Process] struct{}
+		suspiciousProcesses := make(map[Process] struct{})
 		for _, inode := range inodes {
 			var suspiciousProcess *Process
 			suspiciousProcess, err = SearchProcessOfContainerFromInode(container, inode)
@@ -259,8 +259,8 @@ func searchProcessOfContainerBasedOnConditionalFunction(container *container.Con
 	return
 }
 
-// RetrieveAllInodeFromNetOfPid return all inodes of specific process id.
-func RetrieveAllInodeFromNetOfPid(pid int) (allInode []uint64, err error) {
+// RetrieveAllInodeFromRawOfPid return all inodes of specific process id.
+func RetrieveAllInodeFromRawOfPid(pid int) (allInode []uint64, err error) {
 	argFields := logrus.WithField("process_id", pid)
 	argFields.Debug("trying to retrieve all inode from net of pid")
 
