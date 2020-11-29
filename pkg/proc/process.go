@@ -56,53 +56,53 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		}
 		argFields.WithField("identified_process", process).Debug("the process identified")
 		return
-	case layers.LayerTypeICMPv4:
-		logrus.Traceln("trying to identify process of icmpv4 packet")
-		var typeCode layers.ICMPv4TypeCode
-		var identifer uint16
-		typeCode, identifer, err = CheckTypeCodeAndIdentiferOfICMPv4(packet)
-		if err == nil {
-			icmpFields := logrus.Fields{
-				"type_code": typeCode,
-				"identifer": identifer,
-			}
-			process, err = SearchProcessOfContainerFromNSpid(container, identifer)
-			if err == nil {
-				argFields.WithFields(icmpFields).Debug("the process identified")
-				return
-			}
-		}
-		argFields.WithField("error", err).Debug("failed to identify process of container with identifer method")
-		err = nil
-		fallthrough
-	default:
-		var inodes []uint64
-		inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid)
+	}
+
+	// detect the process of raw socket
+	var inodes []uint64
+	inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid)
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to identify process of container")
+		return
+	}
+	suspiciousProcesses := make(map[Process] struct{})
+	for _, inode := range inodes {
+		var suspiciousProcess *Process
+		suspiciousProcess, err = SearchProcessOfContainerFromInode(container, inode)
 		if err != nil {
-			argFields.WithField("error", err).Debug("failed to identify process of container")
+			argFields.WithField("error", err).Trace("process not found")
+			continue
+		}
+		suspiciousProcesses[*suspiciousProcess] = struct{}{}
+	}
+	if len(suspiciousProcesses) == 1 {
+		for suspiciousProcess := range suspiciousProcesses {
+			process = &suspiciousProcess
+			argFields.WithField("identified_process", process).Debug("the process identified")
 			return
 		}
-		suspiciousProcesses := make(map[Process] struct{})
-		for _, inode := range inodes {
-			var suspiciousProcess *Process
-			suspiciousProcess, err = SearchProcessOfContainerFromInode(container, inode)
-			if err != nil {
-				argFields.WithField("error", err).Trace("process not found")
-				continue
-			}
-			suspiciousProcesses[*suspiciousProcess] = struct{}{}
+	}
+	if socket.Protocol == layers.LayerTypeICMPv4 {
+		var identifer uint16
+		identifer, err = CheckIdentiferOfICMPv4(packet)
+		if err != nil {
+			argFields.WithField("error", err).Trace("failed to identify process of container with identifer method")
+			return
 		}
+		identiferStr := strconv.FormatUint(uint64(identifer), 10)
 		for suspiciousProcess := range suspiciousProcesses {
-			if len(suspiciousProcesses) == 1 {
+			if NSpidExists(suspiciousProcess.ID, identiferStr) {
 				process = &suspiciousProcess
 				argFields.WithField("identified_process", process).Debug("the process identified")
 				return
 			}
-			argFields.WithField("suspicious_process", suspiciousProcess).Info("multiple communicated processes detected")
 		}
 	}
+	for suspiciousProcess := range suspiciousProcesses {
+		argFields.WithField("suspicious_process", suspiciousProcess).Info("multiple processes detected")
+	}
 
-	err = errors.New("multiple communicated processes detected")
+	err = errors.New("the process not found")
 	argFields.WithField("error", err).Debug("failed to indentify process of container")
 	return
 }
@@ -287,9 +287,9 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 }
 
 // SearchProcessOfContainerFromNSpid return Process struct of the process that have specific NSpid.
-func SearchProcessOfContainerFromNSpid(container *container.Container, nspid uint16) (process *Process, err error) {
-	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(uint64(nspid), 10), NSpidExists)
-}
+// func SearchProcessOfContainerFromNSpid(container *container.Container, nspid uint16) (process *Process, err error) {
+// 	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(uint64(nspid), 10), NSpidExists)
+// }
 
 // MakeProcessStruct return Process struct of specified pid.
 func MakeProcessStruct(pid int) (process *Process, err error) {

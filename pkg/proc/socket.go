@@ -103,7 +103,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	return
 }
 
-func CheckTypeCodeAndIdentiferOfICMPv4(packet *gopacket.Packet) (typeCode layers.ICMPv4TypeCode, identifer uint16, err error) {
+func CheckIdentiferOfICMPv4(packet *gopacket.Packet) (identifer uint16, err error) {
 	argFields := logrus.WithField("packet", packet)
 	argFields.Debug("trying to check type code and identifer of icmp")
 
@@ -115,11 +115,9 @@ func CheckTypeCodeAndIdentiferOfICMPv4(packet *gopacket.Packet) (typeCode layers
 	}
 
 	icmpv4, _ := icmpv4Layer.(*layers.ICMPv4)
-	typeCode = icmpv4.TypeCode
 	identifer = icmpv4.Id
 
 	argFields.WithFields(logrus.Fields{
-		"type_code": typeCode,
 		"identifer": identifer,
 	}).Debug("checked type code and identifer of icmpv4")
 	return
