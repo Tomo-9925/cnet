@@ -7,8 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -211,54 +209,6 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 	return
 }
 
-func searchProcessOfContainerBasedOnConditionalFunction(container *container.Container, keyword string, conditionalFunction func(int, string) bool) (process *Process, err error) {
-	argFields := logrus.WithFields(logrus.Fields{
-		"communicated_container": container,
-		"keyword": keyword,
-		"conditional_function": runtime.FuncForPC(reflect.ValueOf(conditionalFunction).Pointer()).Name(),
-	})
-	argFields.Debug("trying to search process of container with the conditional function")
-
-	// Make pidStack
-	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
-	var containerdShimPid int
-	containerdShimPid, err = RetrievePPID(container.Pid)
-	if err != nil {
-		argFields.WithField("error", err).Debug("failed to search process of container from inode")
-		return
-	}
-	argFields.WithField("pid_of_containerd_shim", containerdShimPid).Trace("pid of containered-shim retrieved")
-	var childPIDs []int
-	childPIDs, err = RetrieveChildPIDs(containerdShimPid)
-	if err != nil {
-		argFields.WithField("error", err).Debug("failed to search process of container from inode")
-		return
-	}
-	argFields.WithField("child_pids_of_containerd_shim", childPIDs).Trace("child pids of containered-shim retrieved")
-	var pids pidStack
-	pids.Push(childPIDs...)
-
-	// Check inode of pids
-	for pids.Len() != 0 {
-		pid := pids.Pop()
-		argFields.WithField("popped_pid", pid).Trace("pid popped from pid stack")
-		if conditionalFunction(pid, keyword) {
-			process, err = MakeProcessStruct(pid)
-			return
-		}
-		childPIDs, err = RetrieveChildPIDs(pid)
-		if err != nil {
-			argFields.WithField("error", err).Debug("failed to search process of container from inode")
-			return
-		}
-		argFields.WithField("retrieved_child_pids", childPIDs).Trace("child_pids retrieved")
-		pids.Push(childPIDs...)
-	}
-	err = errors.New("process not found")
-	argFields.WithField("error", err).Debug("failed to search process of container from inode")
-	return
-}
-
 // RetrieveAllInodeFromRawOfPid return all inodes of specific process id.
 func RetrieveAllInodeFromRawOfPid(pid int) (allInode []uint64, err error) {
 	argFields := logrus.WithField("process_id", pid)
@@ -283,13 +233,53 @@ func RetrieveAllInodeFromRawOfPid(pid int) (allInode []uint64, err error) {
 
 // SearchProcessOfContainerFromInode return Process struct of the process that have specific socket inode.
 func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
-	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(inode, 10), SocketInodeExists)
-}
+	argFields := logrus.WithFields(logrus.Fields{
+		"communicated_container": container,
+		"inode": inode,
+	})
+	argFields.Debug("trying to search process of container from inode")
 
-// SearchProcessOfContainerFromNSpid return Process struct of the process that have specific NSpid.
-// func SearchProcessOfContainerFromNSpid(container *container.Container, nspid uint16) (process *Process, err error) {
-// 	return searchProcessOfContainerBasedOnConditionalFunction(container, strconv.FormatUint(uint64(nspid), 10), NSpidExists)
-// }
+	// Make pidStack
+	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
+	var containerdShimPid int
+	containerdShimPid, err = RetrievePPID(container.Pid)
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to search process of container from inode")
+		return
+	}
+	argFields.WithField("pid_of_containerd_shim", containerdShimPid).Trace("pid of containered-shim retrieved")
+	var childPIDs []int
+	childPIDs, err = RetrieveChildPIDs(containerdShimPid)
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to search process of container from inode")
+		return
+	}
+	argFields.WithField("child_pids_of_containerd_shim", childPIDs).Trace("child pids of containered-shim retrieved")
+	var pids pidStack
+	pids.Push(childPIDs...)
+
+	inodeStr := strconv.FormatUint(inode, 10)
+
+	// Check inode of pids
+	for pids.Len() != 0 {
+		pid := pids.Pop()
+		argFields.WithField("popped_pid", pid).Trace("pid popped from pid stack")
+		if SocketInodeExists(pid, inodeStr) {
+			process, err = MakeProcessStruct(pid)
+			return
+		}
+		childPIDs, err = RetrieveChildPIDs(pid)
+		if err != nil {
+			argFields.WithField("error", err).Debug("failed to search process of container from inode")
+			return
+		}
+		argFields.WithField("retrieved_child_pids", childPIDs).Trace("child_pids retrieved")
+		pids.Push(childPIDs...)
+	}
+	err = errors.New("process not found")
+	argFields.WithField("error", err).Debug("failed to search process of container from inode")
+	return
+}
 
 // MakeProcessStruct return Process struct of specified pid.
 func MakeProcessStruct(pid int) (process *Process, err error) {
