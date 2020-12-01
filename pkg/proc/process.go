@@ -218,12 +218,10 @@ func RetrieveAllInodeFromRawOfPid(pid int) (allInode []uint64, err error) {
 		argFields.WithField("error", err).Debug("failed to retrieve all inode from net of pid")
 		return
 	}
-	entry, exist := retrieveSocketEntry()
-	for exist {
+	for entry, exist := retrieveSocketEntry(); exist; entry, exist = retrieveSocketEntry(){
 		var inode uint64
 		inode, err = strconv.ParseUint(entry[2], 10, 64)
 		allInode = append(allInode, inode)
-		entry, exist = retrieveSocketEntry()
 	}
 	argFields.WithField("all_inode", allInode).Debug("all inode retrieved")
 	return
