@@ -30,7 +30,7 @@ const (
 	out
 )
 
-// NOTE: ICMP packets containing identifer may be able to support.
+// NOTE: ICMP packets containing identifier may be able to support.
 // var supportedProtocol []gopacket.LayerType = []gopacket.LayerType{
 // 	layers.LayerTypeTCP,
 // 	layers.LayerTypeUDP,
@@ -103,23 +103,23 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	return
 }
 
-func CheckIdentiferOfICMPv4(packet *gopacket.Packet) (identifer uint16, err error) {
+func CheckIdentifierOfICMPv4(packet *gopacket.Packet) (identifier uint16, err error) {
 	argFields := logrus.WithField("packet", packet)
-	argFields.Debug("trying to check type code and identifer of icmp")
+	argFields.Debug("trying to check type code and identifier of icmp")
 
 	icmpv4Layer := (*packet).Layer(layers.LayerTypeICMPv4)
 	if icmpv4Layer == nil {
 		err = errors.New("icmpv4 layer not found")
-		argFields.WithField("error", err).Debug("failed to check type code and identifer of icmpv4")
+		argFields.WithField("error", err).Debug("failed to check type code and identifier of icmpv4")
 		return
 	}
 
 	icmpv4, _ := icmpv4Layer.(*layers.ICMPv4)
-	identifer = icmpv4.Id
+	identifier = icmpv4.Id
 
 	argFields.WithFields(logrus.Fields{
-		"identifer": identifer,
-	}).Debug("checked type code and identifer of icmpv4")
+		"identifier": identifier,
+	}).Debug("checked type code and identifier of icmpv4")
 	return
 }
 

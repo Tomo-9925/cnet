@@ -81,15 +81,15 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		}
 	}
 	if socket.Protocol == layers.LayerTypeICMPv4 {
-		var identifer uint16
-		identifer, err = CheckIdentiferOfICMPv4(packet)
+		var identifier uint16
+		identifier, err = CheckIdentifierOfICMPv4(packet)
 		if err != nil {
-			argFields.WithField("error", err).Trace("failed to identify process of container with identifer method")
+			argFields.WithField("error", err).Trace("failed to identify process of container with identifier method")
 			return
 		}
-		identiferStr := strconv.FormatUint(uint64(identifer), 10)
+		identifierStr := strconv.FormatUint(uint64(identifier), 10)
 		for suspiciousProcess := range suspiciousProcesses {
-			if NSpidExists(suspiciousProcess.ID, identiferStr) {
+			if NSpidExists(suspiciousProcess.ID, identifierStr) {
 				process = &suspiciousProcess
 				argFields.WithField("identified_process", process).Debug("the process identified")
 				return
