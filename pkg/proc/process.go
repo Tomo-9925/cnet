@@ -190,8 +190,7 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 	if err != nil {
 		return
 	}
-	entry, exist := retrieveSocketEntry()
-	for exist {
+	for entry, exist := retrieveSocketEntry(); exist; entry, exist = retrieveSocketEntry() {
 		if !strings.HasSuffix(entry[0], socketLocalPort) {
 			argFields.WithField("net_local_port", entry[0]).Trace("the entry skipped")
 			continue
@@ -202,7 +201,6 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			argFields.WithField("socket_inode", inode).Debug("inode found")
 			return
 		}
-		entry, exist = retrieveSocketEntry()
 	}
 	err = errors.New("inode not found")
 	argFields.WithField("error", err).Debug("failed to search inode from net of pid")
