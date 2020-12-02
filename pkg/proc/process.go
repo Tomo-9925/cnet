@@ -58,7 +58,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 
 	// detect the process of raw socket
 	var inodes []uint64
-	inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid)
+	inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid, socket.Protocol)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to identify process of container")
 		return
@@ -208,12 +208,12 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 }
 
 // RetrieveAllInodeFromRawOfPid return all inodes of specific process id.
-func RetrieveAllInodeFromRawOfPid(pid int) (allInode []uint64, err error) {
+func RetrieveAllInodeFromRawOfPid(pid int, protocol gopacket.LayerType) (allInode []uint64, err error) {
 	argFields := logrus.WithField("process_id", pid)
 	argFields.Debug("trying to retrieve all inode from net of pid")
 
 	var retrieveSocketEntry func() ([3]string, bool)
-	retrieveSocketEntry, err = MakeRetrieveSocketEntryFunction(layers.LayerTypeICMPv4, pid)
+	retrieveSocketEntry, err = MakeRetrieveSocketEntryFunction(protocol, pid)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to retrieve all inode from net of pid")
 		return
