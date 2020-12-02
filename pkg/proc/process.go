@@ -111,7 +111,7 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 		"protocol": protocol,
 		"pid": pid,
 	})
-	argFields.Debug("trying to retrieve socket entry")
+	argFields.Debug("trying to make the function that retrieve socket entry")
 
 	var netFilePath string
 	switch protocol {
@@ -132,40 +132,44 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 
 	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	entryScanner.Scan() // Skip header line
-	retrieveFunction = func() (entry [3]string, exist bool) {
-		logrus.Debugln("trying to retrieve entry of socket")
 
-		entryScan:
-		exist = entryScanner.Scan()
-		if !exist {
-			logrus.Debugln("entry not exist")
+	retrieveFunction = func() (entry [3]string, exist bool) {
+		argFields.Debugln("trying to retrieve entry of socket")
+
+		for entryScanner.Scan() {
+			columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
+			columnScanner.Split(bufio.ScanWords)
+			argFields.WithField("entry", entryScanner.Text()).Trace("checking the entry")
+			checkColumn:
+			for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
+				switch columnCounter {
+				case localAddressColumn:
+					entry[0] = columnScanner.Text()
+				case remoteAddressColumn:
+					entry[1] = columnScanner.Text()
+				case inodeColumn:
+					entry[2] = columnScanner.Text()
+					break checkColumn
+				}
+			}
+			entryFields := logrus.Fields{
+				"local_address": entry[0],
+				"rem_address": entry[2],
+				"inode": entry[2],
+			}
+			if entry[2] == "0" {
+				argFields.WithFields(entryFields).Trace("detect inode == 0 entry")
+				continue
+			}
+			argFields.WithFields(entryFields).Debug("entry retrieved")
 			return
 		}
-		columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
-		columnScanner.Split(bufio.ScanWords)
-		argFields.WithField("entry", entryScanner.Text()).Trace("checking the entry")
-		checkColumn:
-		for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
-			switch columnCounter {
-			case localAddressColumn:
-				entry[0] = columnScanner.Text()
-			case remoteAddressColumn:
-				entry[1] = columnScanner.Text()
-			case inodeColumn:
-				entry[2] = columnScanner.Text()
-				break checkColumn
-			}
-		}
-		if entry[2] == "0" {
-			goto entryScan
-		}
-		logrus.WithFields(logrus.Fields{
-			"local_address": entry[0],
-			"rem_address": entry[2],
-			"inode": entry[2],
-		}).Debug("entry retrieved")
+
+		argFields.Debugln("entry not exist")
 		return
 	}
+
+	argFields.Debugln("the function that retrieve socket entry made")
 	return
 }
 
