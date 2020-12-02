@@ -136,7 +136,7 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 	retrieveFunction = func() (entry [3]string, exist bool) {
 		argFields.Debugln("trying to retrieve entry of socket")
 
-		for entryScanner.Scan() {
+		for exist = entryScanner.Scan(); exist; exist = entryScanner.Scan() {
 			columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 			columnScanner.Split(bufio.ScanWords)
 			argFields.WithField("entry", entryScanner.Text()).Trace("checking the entry")
@@ -154,7 +154,7 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 			}
 			entryFields := logrus.Fields{
 				"local_address": entry[0],
-				"rem_address": entry[2],
+				"rem_address": entry[1],
 				"inode": entry[2],
 			}
 			if entry[2] == "0" {
