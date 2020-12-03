@@ -1,6 +1,6 @@
 module github.com/tomo-9925/cnet
 
-go 1.14
+go 1.15
 
 require (
 	github.com/AkihiroSuda/go-netfilter-queue v0.0.0-20180724014230-5b02f804b4f2
