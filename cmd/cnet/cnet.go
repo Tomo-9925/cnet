@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
@@ -25,8 +27,9 @@ const (
 )
 
 var (
-	err             error
-	logFile         *os.File
-	containers      []*container.Container
-	policies        policy.Policies
+	err        error
+	logFile    *os.File
+	containers []*container.Container
+	policies   policy.Policies
+	logLevel   logrus.Level
 )
