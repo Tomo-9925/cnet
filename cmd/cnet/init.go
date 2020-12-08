@@ -12,7 +12,23 @@ import (
 
 func init() {
 	logrus.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	logrus.SetOutput(os.Stdout)
+
+	if !debug {
+		// Writing to a file in production environment only
+		logrus.SetFormatter(&logrus.TextFormatter{
+			DisableColors: true,
+			FullTimestamp: true,
+		})
+		logFile, err = os.OpenFile(logFilePath,
+			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+			0666)
+		if err != nil {
+			logrus.WithField("error", err).Fatal("failed to initialize cnet")
+		}
+		logrus.SetOutput(logFile)
+	} else {
+		logrus.SetOutput(os.Stdout)
+	}
 
 	var logLevelFlag *string
 	var defaultLogLevel string
@@ -68,20 +84,6 @@ func init() {
 		"queue_num":  queueNum,
 	}).Info("the nfqueue rule added")
 
-	if !debug {
-		// Writing to a file in production environment only
-		logrus.SetFormatter(&logrus.TextFormatter{
-			DisableColors: true,
-			FullTimestamp: true,
-		})
-		logFile, err = os.OpenFile(logFilePath,
-			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
-			0666)
-		if err != nil {
-			logrus.WithField("error", err).Fatal("failed to initialize cnet")
-		}
-		logrus.SetOutput(logFile)
-	}
 	logrus.DeferExitHandler(deinit)
 
 	logrus.WithFields(logrus.Fields{
