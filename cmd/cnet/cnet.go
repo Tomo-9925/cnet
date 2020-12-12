@@ -5,6 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/masibw/go-netfilter-queue"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
@@ -32,4 +33,5 @@ var (
 	containers []*container.Container
 	policies   policy.Policies
 	logLevel   logrus.Level
+	queue      *netfilter.NFQueue
 )

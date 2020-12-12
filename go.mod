@@ -11,6 +11,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/google/go-cmp v0.5.3
 	github.com/google/gopacket v1.1.19
+	github.com/masibw/go-netfilter-queue v0.0.0-20201212105114-06c1993e5dd0
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.7.0
