@@ -22,7 +22,6 @@ func main() {
 	if err != nil {
 		logrus.WithField("error", err).Fatal("failed to bind nfqueue")
 	}
-	logrus.DeferExitHandler(queue.Close)
 	packets := queue.GetPackets()
 
 	runCh := make(chan string)
@@ -40,8 +39,8 @@ func main() {
 			//Include newly launched containers in the monitoring
 			containerFields := logrus.WithFields(logrus.Fields{
 				"container_id": cid,
-				"containers": containers,
-				})
+				"containers":   containers,
+			})
 			container, err := container.FetchDockerContainerInspection(cid)
 			if err != nil {
 				containerFields.WithField("error", err).Fatal("failed to fetch docker container inspection")
@@ -60,8 +59,8 @@ func main() {
 			container.RemoveContainerFromSlice(containers, cid)
 			logrus.WithFields(logrus.Fields{
 				"container_id": cid,
-				"containers": containers,
-				}).Info("container information removed")
+				"containers":   containers,
+			}).Info("container information removed")
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:
@@ -81,9 +80,9 @@ func main() {
 			if err != nil {
 				p.SetVerdict(netfilter.NF_DROP)
 				logrus.WithField("error", err).WithFields(logrus.Fields{
-					"target_socket": targetSocket,
+					"target_socket":          targetSocket,
 					"communicated_container": communicatedContainer,
-					}).Warn("the packet with unidentified process dropped")
+				}).Warn("the packet with unidentified process dropped")
 				continue
 			}
 			communicationFields := logrus.WithFields(logrus.Fields{
