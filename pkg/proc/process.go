@@ -239,8 +239,6 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	// Make pidStack
-	// NOTE: Avoid the use of recursive functions and do a depth-first search for processes with inodes.
 	var containerdShimPid int
 	containerdShimPid, err = RetrievePPID(container.Pid)
 	if err != nil {
@@ -254,27 +252,15 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 		argFields.WithField("error", err).Debug("failed to search process of container from inode")
 		return
 	}
-	argFields.WithField("child_pids_of_containerd_shim", childPIDs).Trace("child pids of containered-shim retrieved")
-	var pids pidStack
-	pids.Push(childPIDs...)
 
 	inodeStr := strconv.FormatUint(inode, 10)
 
 	// Check inode of pids
-	for pids.Len() != 0 {
-		pid := pids.Pop()
-		argFields.WithField("popped_pid", pid).Trace("pid popped from pid stack")
+	for _, pid := range childPIDs {
 		if SocketInodeExists(pid, inodeStr) {
 			process, err = MakeProcessStruct(pid)
 			return
 		}
-		childPIDs, err = RetrieveChildPIDs(pid)
-		if err != nil {
-			argFields.WithField("error", err).Debug("failed to search process of container from inode")
-			return
-		}
-		argFields.WithField("retrieved_child_pids", childPIDs).Trace("child_pids retrieved")
-		pids.Push(childPIDs...)
 	}
 	err = errors.New("process not found")
 	argFields.WithField("error", err).Debug("failed to search process of container from inode")
@@ -329,34 +315,78 @@ func RetrievePPID(pid int) (ppid int, err error) {
 	return
 }
 
-// RetrieveChildPIDs gets child PIDs from children of proc filesystem.
-func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
-	argFields := logrus.WithField("pid", pid)
-	argFields.Debug("trying to retrieve child pids")
+func makeChildPIDMap() (result map[int][]int) {
+	result = make(map[int][]int)
 
-	pidStr := strconv.Itoa(pid)
-	netFilePath := filepath.Join(procPath, pidStr, "task", pidStr, "children")
-	var file []byte
-	file, err = ioutil.ReadFile(netFilePath)
+	files, err := ioutil.ReadDir(procPath)
 	if err != nil {
-		argFields.WithField("error", err).Debug("failed to retrieve child pids")
 		return
 	}
 
-	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
-	scanner.Split(bufio.ScanWords)
-	for scanner.Scan() {
-		pid, err = strconv.Atoi(scanner.Text())
-		if err != nil {
-			argFields.WithField("error", err).Debug("failed to retrieve child pids")
-			return
+	for _, file := range files {
+		var pid, ppid int
+		fileName := file.Name()
+		if fileName[0] < '0' || fileName[0] > '9' {
+			continue
 		}
-		argFields.WithField("retrieved_child_pid", pid).Trace("child pid retrieved")
-		childPIDs = append(childPIDs, pid)
+		pid, err = strconv.Atoi(fileName)
+		if err != nil {
+			continue
+		}
+		ppid, err = RetrievePPID(pid)
+		if err != nil {
+			continue
+		}
+		result[ppid] = append(result[ppid], pid)
 	}
-	argFields.WithField("retrieved_child_pids", childPIDs).Debug("the child pids retrieved")
+
 	return
 }
+
+// RetrieveChildPIDs gets recursively child PIDs from children of proc filesystem.
+func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to retrieve child pids")
+
+	childPIDMap := makeChildPIDMap()
+	var searchPIDStack pidStack
+	searchPIDStack.Push(childPIDMap[pid]...)
+	for searchPIDStack.Len() != 0 {
+		currentPID := searchPIDStack.Pop()
+		childPIDSlice = append(childPIDSlice, currentPID)
+		searchPIDStack.Push(childPIDMap[currentPID]...)
+	}
+
+	argFields.WithField("retrieved_child_pids", childPIDSlice).Debug("the child pids retrieved")
+	return
+}
+// func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
+// 	argFields := logrus.WithField("pid", pid)
+// 	argFields.Debug("trying to retrieve child pids")
+
+// 	pidStr := strconv.Itoa(pid)
+// 	netFilePath := filepath.Join(procPath, pidStr, "task", pidStr, "children")
+// 	var file []byte
+// 	file, err = ioutil.ReadFile(netFilePath)
+// 	if err != nil {
+// 		argFields.WithField("error", err).Debug("failed to retrieve child pids")
+// 		return
+// 	}
+
+// 	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
+// 	scanner.Split(bufio.ScanWords)
+// 	for scanner.Scan() {
+// 		pid, err = strconv.Atoi(scanner.Text())
+// 		if err != nil {
+// 			argFields.WithField("error", err).Debug("failed to retrieve child pids")
+// 			return
+// 		}
+// 		argFields.WithField("retrieved_child_pid", pid).Trace("child pid retrieved")
+// 		childPIDs = append(childPIDs, pid)
+// 	}
+// 	argFields.WithField("retrieved_child_pids", childPIDs).Debug("the child pids retrieved")
+// 	return
+// }
 
 // SocketInodeExists reports whether the process has socket inode.
 func SocketInodeExists(pid int, inodeStr string) bool {
