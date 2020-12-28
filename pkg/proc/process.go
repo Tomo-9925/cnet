@@ -360,33 +360,6 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 	argFields.WithField("retrieved_child_pids", childPIDSlice).Debug("the child pids retrieved")
 	return
 }
-// func RetrieveChildPIDs(pid int) (childPIDs []int, err error) {
-// 	argFields := logrus.WithField("pid", pid)
-// 	argFields.Debug("trying to retrieve child pids")
-
-// 	pidStr := strconv.Itoa(pid)
-// 	netFilePath := filepath.Join(procPath, pidStr, "task", pidStr, "children")
-// 	var file []byte
-// 	file, err = ioutil.ReadFile(netFilePath)
-// 	if err != nil {
-// 		argFields.WithField("error", err).Debug("failed to retrieve child pids")
-// 		return
-// 	}
-
-// 	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
-// 	scanner.Split(bufio.ScanWords)
-// 	for scanner.Scan() {
-// 		pid, err = strconv.Atoi(scanner.Text())
-// 		if err != nil {
-// 			argFields.WithField("error", err).Debug("failed to retrieve child pids")
-// 			return
-// 		}
-// 		argFields.WithField("retrieved_child_pid", pid).Trace("child pid retrieved")
-// 		childPIDs = append(childPIDs, pid)
-// 	}
-// 	argFields.WithField("retrieved_child_pids", childPIDs).Debug("the child pids retrieved")
-// 	return
-// }
 
 // SocketInodeExists reports whether the process has socket inode.
 func SocketInodeExists(pid int, inodeStr string) bool {
