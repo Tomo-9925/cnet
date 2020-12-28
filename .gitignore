@@ -49,7 +49,7 @@ Temporary Items
 
 # cnet
 cmd/cnet/*.yml
-cmd/cnet/*.log
+*.log
 
 # Visual Studio Code
 .vscode/*

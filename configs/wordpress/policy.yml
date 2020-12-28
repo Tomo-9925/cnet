@@ -6,8 +6,9 @@ policies:
           - path: "/usr/sbin/apache2"
         sockets:
           - protocol: "tcp"
-            local_port: 8080
+            local_port: 80
           - protocol: "tcp"
+            remote_IP: "192.168.0.0/16"
             remote_port: 3306
   - container:
       name: "cnet_db"
@@ -16,4 +17,5 @@ policies:
           - path: "/usr/sbin/mariadbd"
         sockets:
           - protocol: "tcp"
+            remote_IP: "192.168.0.0/16"
             local_port: 3306
