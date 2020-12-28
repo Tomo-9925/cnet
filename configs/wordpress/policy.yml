@@ -1,0 +1,19 @@
+policies:
+  - container:
+      name: "cnet_wordpress"
+    communications:
+      - processes:
+          - path: "/usr/sbin/apache2"
+        sockets:
+          - protocol: "tcp"
+            local_port: 8080
+          - protocol: "tcp"
+            remote_port: 3306
+  - container:
+      name: "cnet_db"
+    communications:
+      - processes:
+          - path: "/usr/sbin/mariadbd"
+        sockets:
+          - protocol: "tcp"
+            local_port: 3306
