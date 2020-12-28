@@ -57,16 +57,18 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	// Check container and direction, local IP, remote IP
 	var packetDirection direction
 	for _, container := range containers {
-		if ip.SrcIP.Equal(container.IP) {
-			packetDirection = out
-			communicatedContainer = container
-			socket = &Socket{LocalIP: ip.SrcIP, RemoteIP: ip.DstIP}
-			break
-		} else if ip.DstIP.Equal(container.IP) {
-			packetDirection = in
-			communicatedContainer = container
-			socket = &Socket{LocalIP: ip.DstIP, RemoteIP: ip.SrcIP}
-			break
+		for _, ipAddr := range container.IPAddresses {
+			if ip.SrcIP.Equal(ipAddr) {
+				packetDirection = out
+				communicatedContainer = container
+				socket = &Socket{LocalIP: ip.SrcIP, RemoteIP: ip.DstIP}
+				break
+			} else if ip.DstIP.Equal(ipAddr) {
+				packetDirection = in
+				communicatedContainer = container
+				socket = &Socket{LocalIP: ip.DstIP, RemoteIP: ip.SrcIP}
+				break
+			}
 		}
 	}
 	if communicatedContainer == nil {
