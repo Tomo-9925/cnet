@@ -21,6 +21,7 @@ type inodeCacheMapValue struct {
 
 type inodeCacheMap map[inodeCacheMapKey]inodeCacheMapValue
 
+// ClearInodeCache clear inodeCache map of proc package
 func ClearInodeCache() {
 	inodeCache = make(inodeCacheMap)
 }

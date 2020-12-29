@@ -62,11 +62,11 @@ func FetchDockerContainerInspection(cid string) (container *Container, err error
 	}
 
 	cidField.WithField("container_inspection", inspect).Debug("container inspection fetched")
-	var ips []net.IP
+	ipAddresses := make([]net.IP, 0, len(inspect.NetworkSettings.Networks))
 	for _, network := range inspect.NetworkSettings.Networks {
-		ips = append(ips, net.ParseIP(network.IPAddress))
+		ipAddresses = append(ipAddresses, net.ParseIP(network.IPAddress))
 	}
-	container = &Container{inspect.ID, ips, inspect.Name, inspect.State.Pid}
+	container = &Container{inspect.ID, ipAddresses, inspect.Name, inspect.State.Pid}
 	return
 }
 

@@ -30,12 +30,6 @@ const (
 	out
 )
 
-// NOTE: ICMP packets containing identifier may be able to support.
-// var supportedProtocol []gopacket.LayerType = []gopacket.LayerType{
-// 	layers.LayerTypeTCP,
-// 	layers.LayerTypeUDP,
-// }
-
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
 func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
@@ -105,6 +99,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	return
 }
 
+// CheckIdentifierOfICMPv4 returns identifier from icmp packet.
 func CheckIdentifierOfICMPv4(packet *gopacket.Packet) (identifier uint16, err error) {
 	argFields := logrus.WithField("packet", packet)
 	argFields.Debug("trying to check type code and identifier of icmp")
