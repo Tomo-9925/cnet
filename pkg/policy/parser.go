@@ -82,15 +82,10 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 				case "icmpv4":
 					socket.Protocol = layers.LayerTypeICMPv4
 				}
-				if strings.Contains(yamlSocket.RemoteIP, "/") {
-					_, socket.RemoteIP, err = net.ParseCIDR(yamlSocket.RemoteIP)
-					if err != nil {
-						pathField.WithField("error", err).Debug("failed to parse security policy")
-						return
-					}
-				} else {
-					socket.RemoteIP = &net.IPNet{IP: net.ParseIP(yamlSocket.RemoteIP)}
+				if !strings.Contains(yamlSocket.RemoteIP, "/") {
+					yamlSocket.RemoteIP = yamlSocket.RemoteIP + "/32"
 				}
+				_, socket.RemoteIP, _ = net.ParseCIDR(yamlSocket.RemoteIP)
 				communication.Sockets = append(communication.Sockets, socket)
 			}
 			parsedPolicy.Communications = append(parsedPolicy.Communications, &communication)
