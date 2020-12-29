@@ -8,7 +8,7 @@ policies:
           - protocol: "tcp"
             local_port: 80
           - protocol: "tcp"
-            remote_IP: "192.168.0.0/16"
+            remote_ip: "192.168.3.2"
             remote_port: 3306
   - container:
       name: "cnet_db"
@@ -17,5 +17,5 @@ policies:
           - path: "/usr/sbin/mariadbd"
         sockets:
           - protocol: "tcp"
-            remote_IP: "192.168.0.0/16"
+            remote_ip: "192.168.3.3"
             local_port: 3306
