@@ -1,7 +1,6 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 
@@ -50,9 +49,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 		return false
 	} else if s.RemotePort != 0 && s.RemotePort != x.RemotePort {
 		return false
-	} else if !bytes.Equal(s.RemoteIP.Mask, net.IPMask{}) && !s.RemoteIP.Contains(x.RemoteIP) {
-		return false
-	} else if !s.RemoteIP.IP.Equal(net.IP{}) && !s.RemoteIP.IP.Equal(x.RemoteIP) {
+	} else if s.RemoteIP != nil && !s.RemoteIP.Contains(x.RemoteIP) {
 		return false
 	}
 	return true
