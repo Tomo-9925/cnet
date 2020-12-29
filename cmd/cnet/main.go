@@ -54,6 +54,9 @@ func main() {
 				containerFields.WithField("error", err).Fatal("failed to parse security policy")
 			}
 			logrus.WithField("policies", policies).Info("the security policy data reloaded")
+
+			logrus.Infoln("clear inode cache")
+			proc.ClearInodeCache()
 		case cid := <-killCh:
 			//Removing finished containers from monitoring
 			container.RemoveContainerFromSlice(containers, cid)
@@ -61,6 +64,8 @@ func main() {
 				"container_id": cid,
 				"containers":   containers,
 			}).Info("container information removed")
+			logrus.Infoln("clear inode cache")
+			proc.ClearInodeCache()
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:

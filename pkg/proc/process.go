@@ -48,7 +48,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			argFields.WithField("error", err).Debug("failed to indentify process of container")
 			return
 		}
-		process, err = SearchProcessOfContainerFromInode(container, inode)
+		process, err = SearchProcessOfContainerFromInode(container, socket, inode)
 		if err != nil {
 			argFields.WithField("error", err).Debug("failed to indentify process of container")
 		}
@@ -66,7 +66,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 	suspiciousProcesses := make(map[Process] struct{})
 	for _, inode := range inodes {
 		var suspiciousProcess *Process
-		suspiciousProcess, err = SearchProcessOfContainerFromInode(container, inode)
+		suspiciousProcess, err = SearchProcessOfContainerFromInode(container, socket, inode)
 		if err != nil {
 			argFields.WithField("error", err).Trace("process not found")
 			continue
@@ -232,25 +232,22 @@ func RetrieveAllInodeFromRawOfPid(pid int, protocol gopacket.LayerType) (allInod
 }
 
 // SearchProcessOfContainerFromInode return Process struct of the process that have specific socket inode.
-func SearchProcessOfContainerFromInode(container *container.Container, inode uint64) (process *Process, err error) {
+func SearchProcessOfContainerFromInode(container *container.Container, socket *Socket, inode uint64) (process *Process, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"communicated_container": container,
 		"inode": inode,
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	inodeStr := strconv.FormatUint(inode, 10)
-
-	if val, exist := inodeCache[inodeCacheMapKey{container, inode}]; exist {
+	if val, exist := inodeCache[inodeCacheMapKey{container, socket.String(), inode}]; exist {
 		fdFilePath := filepath.Join(procPath, strconv.Itoa(val.process.ID), "fd", strconv.FormatUint(val.fd, 10))
 		var linkContent string
-		linkContent, err = os.Readlink(fdFilePath)
-		if err != nil && strings.HasSuffix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == inodeStr {
+		linkContent, _ = os.Readlink(fdFilePath)
+		if strings.HasSuffix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == strconv.FormatUint(inode, 10) {
 			process = val.process
 			argFields.WithField("process", process).Debug("process exists")
 			return
 		}
-		err = nil
 	}
 
 	var containerdShimPid int
@@ -269,9 +266,10 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 
 	// Check inode of pids
 	for _, pid := range childPIDs {
-		if SocketInodeExists(pid, inodeStr) {
+		if fd, exist := SocketInodeExists(pid, inode); exist {
 			process, err = MakeProcessStruct(pid)
 			argFields.WithField("process", process).Debug("process exists")
+			inodeCache[inodeCacheMapKey{container, socket.String(), inode}] = inodeCacheMapValue{fd, process}
 			return
 		}
 	}
@@ -375,10 +373,10 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 }
 
 // SocketInodeExists reports whether the process has socket inode.
-func SocketInodeExists(pid int, inodeStr string) bool {
+func SocketInodeExists(pid int, inode uint64) (fd uint64, exist bool) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"pid": pid,
-		"socket_inode": inodeStr,
+		"socket_inode": inode,
 	})
 	argFields.Debug("trying to check whether the process has socket inode")
 
@@ -386,26 +384,29 @@ func SocketInodeExists(pid int, inodeStr string) bool {
 	fdFiles, err := ioutil.ReadDir(fdDirPath)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
-		return false
+		return
 	}
 	for _, fdFile := range fdFiles {
 		linkContent, err := os.Readlink(filepath.Join(fdDirPath, fdFile.Name()))
 		if err != nil {
 			argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
-			return false
+			return
 		}
-		if !strings.HasPrefix(linkContent, "socket") {
-			continue
-		}
-		if linkContent[8:len(linkContent)-1] == inodeStr {
-			return true
+		if strings.HasPrefix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == strconv.FormatUint(inode, 10) {
+			fd, err = strconv.ParseUint(fdFile.Name(), 10, 64)
+			if err != nil {
+				argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
+			}
+			exist = true
+			argFields.WithField("fd", fd).Debug("socket inode exists")
+			return
 		}
 	}
 	argFields.WithField("error", "file descriptor with the socket inode not found").Debug("failed to check whether the process has socket inode")
-	return false
+	return
 }
 
-// SocketInodeExists reports whether the process has namespace process id.
+// NSpidExists reports whether the process has namespace process id.
 func NSpidExists(pid int, nspidStr string) bool {
 	argFields := logrus.WithFields(logrus.Fields{
 		"pid": pid,

@@ -1,6 +1,8 @@
 package proc
 
-import "github.com/tomo-9925/cnet/pkg/container"
+import (
+	"github.com/tomo-9925/cnet/pkg/container"
+)
 
 var (
 	inodeCache inodeCacheMap = make(inodeCacheMap)
@@ -8,6 +10,7 @@ var (
 
 type inodeCacheMapKey struct {
 	container *container.Container
+	socket string
 	inode uint64
 }
 
@@ -16,8 +19,8 @@ type inodeCacheMapValue struct {
 	process *Process
 }
 
-type inodeCacheMap map[inodeCacheMapKey]*inodeCacheMapValue
+type inodeCacheMap map[inodeCacheMapKey]inodeCacheMapValue
 
-func (m inodeCacheMap) ClearInodeCache() {
+func ClearInodeCache() {
 	inodeCache = make(inodeCacheMap)
 }
