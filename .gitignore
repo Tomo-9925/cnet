@@ -50,6 +50,7 @@ Temporary Items
 # cnet
 cmd/cnet/*.yml
 *.log
+*.gz
 
 # Visual Studio Code
 .vscode/*
