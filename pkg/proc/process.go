@@ -239,6 +239,20 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 	})
 	argFields.Debug("trying to search process of container from inode")
 
+	inodeStr := strconv.FormatUint(inode, 10)
+
+	if val, exist := inodeCache[inodeCacheMapKey{container, inode}]; exist {
+		fdFilePath := filepath.Join(procPath, strconv.Itoa(val.process.ID), "fd", strconv.FormatUint(val.fd, 10))
+		var linkContent string
+		linkContent, err = os.Readlink(fdFilePath)
+		if err != nil && strings.HasSuffix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == inodeStr {
+			process = val.process
+			argFields.WithField("process", process).Debug("process exists")
+			return
+		}
+		err = nil
+	}
+
 	var containerdShimPid int
 	containerdShimPid, err = RetrievePPID(container.Pid)
 	if err != nil {
@@ -253,12 +267,11 @@ func SearchProcessOfContainerFromInode(container *container.Container, inode uin
 		return
 	}
 
-	inodeStr := strconv.FormatUint(inode, 10)
-
 	// Check inode of pids
 	for _, pid := range childPIDs {
 		if SocketInodeExists(pid, inodeStr) {
 			process, err = MakeProcessStruct(pid)
+			argFields.WithField("process", process).Debug("process exists")
 			return
 		}
 	}
