@@ -327,31 +327,62 @@ func RetrievePPID(pid int) (ppid int, err error) {
 	return
 }
 
-func makeChildPIDMap() (result map[int][]int) {
-	result = make(map[int][]int)
+// makeChildPIDMap return child pid map (the key is pid. the value is child pid slice).
+// func makeChildPIDMap() (result map[int][]int) {
+// 	logrus.Debugln("trying to make child pid map")
+// 	result = make(map[int][]int)
 
-	files, err := ioutil.ReadDir(procPath)
+// 	files, err := ioutil.ReadDir(procPath)
+// 	if err != nil {
+// 		return
+// 	}
+
+// 	for _, file := range files {
+// 		var pid, ppid int
+// 		fileName := file.Name()
+// 		if fileName[0] < '0' || fileName[0] > '9' {
+// 			continue
+// 		}
+// 		pid, err = strconv.Atoi(fileName)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		ppid, err = RetrievePPID(pid)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		result[ppid] = append(result[ppid], pid)
+// 	}
+
+// 	logrus.WithField("child_pid_map", result).Debug("child pid map made")
+// 	return
+// }
+
+func retrieveChildren(pid int) (result []int, err error) {
+	argFields := logrus.WithField("pid", pid)
+	argFields.Debug("trying to retrieve the children")
+
+	pidStr := strconv.Itoa(pid)
+	var file []byte
+	file, err = ioutil.ReadFile(filepath.Join(procPath, pidStr, "task", pidStr, "children"))
 	if err != nil {
+		argFields.WithField("error", err).Debug("failed to retrieve the children")
 		return
 	}
 
-	for _, file := range files {
-		var pid, ppid int
-		fileName := file.Name()
-		if fileName[0] < '0' || fileName[0] > '9' {
-			continue
-		}
-		pid, err = strconv.Atoi(fileName)
+	scanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
+	scanner.Split(bufio.ScanWords)
+	for scanner.Scan() {
+		var childPid int
+		childPid, err = strconv.Atoi(scanner.Text())
 		if err != nil {
-			continue
+			argFields.WithField("error", err).Debug("failed to retrieve the children")
+			return
 		}
-		ppid, err = RetrievePPID(pid)
-		if err != nil {
-			continue
-		}
-		result[ppid] = append(result[ppid], pid)
+		result = append(result, childPid)
 	}
 
+	argFields.WithField("children", result).Debug("the children retrieved")
 	return
 }
 
@@ -360,14 +391,30 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve child pids")
 
-	childPIDMap := makeChildPIDMap()
 	var searchPIDStack pidStack
-	searchPIDStack.Push(childPIDMap[pid]...)
-	for searchPIDStack.Len() != 0 {
-		currentPID := searchPIDStack.Pop()
-		childPIDSlice = append(childPIDSlice, currentPID)
-		searchPIDStack.Push(childPIDMap[currentPID]...)
+	var retrievedChildren []int
+	for {
+		retrievedChildren, err = retrieveChildren(pid)
+		if err != nil {
+			argFields.WithField("retrieved_child_pids", childPIDSlice).Debug("failed to retrieve the child pids")
+			return
+		}
+		searchPIDStack.Push(retrievedChildren...)
+		if searchPIDStack.Len() == 0 {
+			break
+		}
+		pid = searchPIDStack.Pop()
+		childPIDSlice = append(childPIDSlice, pid)
 	}
+
+	// python psutil method (no need now)
+	// childPIDMap := makeChildPIDMap()
+	// searchPIDStack.Push(childPIDMap[pid]...)
+	// for searchPIDStack.Len() != 0 {
+	// 	currentPID := searchPIDStack.Pop()
+	// 	childPIDSlice = append(childPIDSlice, currentPID)
+	// 	searchPIDStack.Push(childPIDMap[currentPID]...)
+	// }
 
 	argFields.WithField("retrieved_child_pids", childPIDSlice).Debug("the child pids retrieved")
 	return

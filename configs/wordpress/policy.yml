@@ -10,6 +10,8 @@ policies:
           - protocol: "tcp"
             remote_ip: "192.168.3.2"
             remote_port: 3306
+          - protocol: "udp"
+            remote_port: 53
   - container:
       name: "cnet_db"
     communications:
