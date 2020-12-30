@@ -1,27 +1,33 @@
 package proc
 
 import (
+	"fmt"
+	"time"
+
+	"github.com/patrickmn/go-cache"
 	"github.com/tomo-9925/cnet/pkg/container"
 )
 
 var (
-	inodeCache inodeCacheMap = make(inodeCacheMap)
+	inodeCache *cache.Cache = cache.New(time.Hour, 2*time.Hour)
 )
 
-type inodeCacheMapKey struct {
+type inodeCacheKey struct {
 	container *container.Container
-	socket string
+	socket *Socket
 	inode uint64
 }
 
-type inodeCacheMapValue struct {
+func (i inodeCacheKey) String() string {
+	return fmt.Sprintf("%p%d%s%s%d%d%d", i.container, i.socket.Protocol, i.socket.LocalIP, i.socket.RemoteIP, i.socket.LocalPort, i.socket.RemotePort, i.inode)
+}
+
+type inodeCacheValue struct {
 	fd uint64
 	process *Process
 }
 
-type inodeCacheMap map[inodeCacheMapKey]inodeCacheMapValue
-
 // ClearInodeCache clear inodeCache map of proc package
 func ClearInodeCache() {
-	inodeCache = make(inodeCacheMap)
+	inodeCache.Flush()
 }

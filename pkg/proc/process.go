@@ -239,12 +239,13 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	if val, exist := inodeCache[inodeCacheMapKey{container, socket.String(), inode}]; exist {
-		fdFilePath := filepath.Join(procPath, strconv.Itoa(val.process.ID), "fd", strconv.FormatUint(val.fd, 10))
+	if data, exist := inodeCache.Get(inodeCacheKey{container, socket, inode}.String()); exist {
+		cacheVal := data.(inodeCacheValue)
+		fdFilePath := filepath.Join(procPath, strconv.Itoa(cacheVal.process.ID), "fd", strconv.FormatUint(cacheVal.fd, 10))
 		var linkContent string
 		linkContent, _ = os.Readlink(fdFilePath)
 		if strings.HasSuffix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == strconv.FormatUint(inode, 10) {
-			process = val.process
+			process = cacheVal.process
 			argFields.WithField("process", process).Debug("process exists")
 			return
 		}
@@ -269,7 +270,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 		if fd, exist := SocketInodeExists(pid, inode); exist {
 			process, err = MakeProcessStruct(pid)
 			argFields.WithField("process", process).Debug("process exists")
-			inodeCache[inodeCacheMapKey{container, socket.String(), inode}] = inodeCacheMapValue{fd, process}
+			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), inodeCacheValue{fd, process}, 0)
 			return
 		}
 	}
