@@ -22,12 +22,7 @@ func (i inodeCacheKey) String() string {
 	return fmt.Sprintf("%p%d%s%s%d%d%d", i.container, i.socket.Protocol, i.socket.LocalIP, i.socket.RemoteIP, i.socket.LocalPort, i.socket.RemotePort, i.inode)
 }
 
-type inodeCacheValue struct {
-	fd uint64
-	process *Process
-}
-
-// ClearInodeCache clear inodeCache map of proc package
+// ClearInodeCache clear inode cache
 func ClearInodeCache() {
 	inodeCache.Flush()
 }

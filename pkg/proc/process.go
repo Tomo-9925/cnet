@@ -240,15 +240,13 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 	argFields.Debug("trying to search process of container from inode")
 
 	if cacheRawData, exist := inodeCache.Get(inodeCacheKey{container, socket, inode}.String()); exist {
-		cacheVal := cacheRawData.(*inodeCacheValue)
-		fdFilePath := filepath.Join(procPath, strconv.Itoa(cacheVal.process.ID), "fd", strconv.FormatUint(cacheVal.fd, 10))
-		var linkContent string
-		linkContent, _ = os.Readlink(fdFilePath)
-		if strings.HasSuffix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == strconv.FormatUint(inode, 10) {
-			process = cacheVal.process
+		var ok bool
+		process, ok = cacheRawData.(*Process)
+		if ok && SocketInodeExists(process.ID, inode) {
 			argFields.WithField("process", process).Debug("process exists")
 			return
 		}
+		process = nil
 	}
 
 	var containerdShimPid int
@@ -267,10 +265,10 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 
 	// Check inode of pids
 	for _, pid := range childPIDs {
-		if fd, exist := SocketInodeExists(pid, inode); exist {
+		if SocketInodeExists(pid, inode) {
 			process, err = MakeProcessStruct(pid)
 			argFields.WithField("process", process).Debug("process exists")
-			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), &inodeCacheValue{fd, process}, 0)
+			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), process, 0)
 			return
 		}
 	}
@@ -421,7 +419,7 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 }
 
 // SocketInodeExists reports whether the process has socket inode.
-func SocketInodeExists(pid int, inode uint64) (fd uint64, exist bool) {
+func SocketInodeExists(pid int, inode uint64) (exist bool) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"pid": pid,
 		"socket_inode": inode,
@@ -441,12 +439,8 @@ func SocketInodeExists(pid int, inode uint64) (fd uint64, exist bool) {
 			return
 		}
 		if strings.HasPrefix(linkContent, "socket") && linkContent[8:len(linkContent)-1] == strconv.FormatUint(inode, 10) {
-			fd, err = strconv.ParseUint(fdFile.Name(), 10, 64)
-			if err != nil {
-				argFields.WithField("error", err).Debug("failed to check whether the process has socket inode")
-			}
 			exist = true
-			argFields.WithField("fd", fd).Debug("socket inode exists")
+			argFields.Debug("socket inode exists")
 			return
 		}
 	}

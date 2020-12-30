@@ -15,12 +15,12 @@ func TestSocketIsDefined(t *testing.T) {
 	)
 	var (
 		testCommunicatedContainer map[bool]*container.Container = map[bool]*container.Container{
-			satisfy: {Name: testContainerName},
-			notSatisfy: {Name: "cnet_quic_test"},
+			satisfy: {ID: "49dae530fd5fee674a6b0d3da89a380fc93746095e7eca0f1b70188a95fd5d71", Name: testContainerName},
+			notSatisfy: {ID: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", Name: "cnet_quic_test"},
 		}
 		testCommunicatedProcess map[bool]*proc.Process = map[bool]*proc.Process{
-			satisfy: {Executable: testProcessExecutable},
-			notSatisfy: {Executable: "curl"},
+			satisfy: {ID: 1,Path: testProcessPath, Executable: testProcessExecutable},
+			notSatisfy: {ID: 2, Path: "/usr/local/bin/curl", Executable: "curl"},
 		}
 		testTargetSocket map[bool]*proc.Socket = map[bool]*proc.Socket {
 			satisfy: {Protocol: testSocketProtocol, RemoteIP: testSocketRemoteIP, RemotePort: testSocketRemotePort},
@@ -38,7 +38,7 @@ func TestSocketIsDefined(t *testing.T) {
 					continue
 				}
 				if expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
-					t.Error("undefined test communication passed:")
+					t.Error("undefined test communication passed", targetContainer, targetProcess, targetSocket)
 				}
 			}
 		}

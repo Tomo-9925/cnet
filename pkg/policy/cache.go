@@ -23,7 +23,7 @@ func (c communicationCacheKey) String() string {
 	return fmt.Sprintf("%p%d%s%d%s%s%d%d", c.container, c.process.ID, c.process.Path, c.socket.Protocol, c.socket.LocalIP, c.socket.RemoteIP, c.socket.LocalPort, c.socket.RemotePort)
 }
 
-// ClearDefinedCommunicatinoCache clear
-func ClearDeginedCommunicationCache() {
+// ClearCommunicationCache clear communication cache
+func ClearCommunicationCache() {
 	communicationCache.Flush()
 }
