@@ -240,7 +240,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 	argFields.Debug("trying to search process of container from inode")
 
 	if cacheRawData, exist := inodeCache.Get(inodeCacheKey{container, socket, inode}.String()); exist {
-		cacheVal := cacheRawData.(inodeCacheValue)
+		cacheVal := cacheRawData.(*inodeCacheValue)
 		fdFilePath := filepath.Join(procPath, strconv.Itoa(cacheVal.process.ID), "fd", strconv.FormatUint(cacheVal.fd, 10))
 		var linkContent string
 		linkContent, _ = os.Readlink(fdFilePath)
@@ -270,7 +270,7 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 		if fd, exist := SocketInodeExists(pid, inode); exist {
 			process, err = MakeProcessStruct(pid)
 			argFields.WithField("process", process).Debug("process exists")
-			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), inodeCacheValue{fd, process}, 0)
+			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), &inodeCacheValue{fd, process}, 0)
 			return
 		}
 	}
