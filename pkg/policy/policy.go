@@ -59,7 +59,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 type Policies []*Policy
 
 // IsDefined reports whether the policy is defined.
-func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) bool {
+func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) (judgement bool) {
 	relevantFields := logrus.WithFields(logrus.Fields{
 		"policies": *p,
 		"communicated_container": communicatedContainer,
@@ -68,7 +68,14 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	})
 	relevantFields.Debug("checking whether define the communication in this policies")
 
+	if cacheRawData, exist := communicationCache.Get(communicationCacheKey{communicatedContainer, communicatedProcess, targetSocket}.String()); exist {
+		judgement = cacheRawData.(bool)
+		relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
+		return
+	}
+
 	// HACK: So many indents that it's hard to understand. The structure of Policies may need to be rethought.
+	comparePolicy:
 	for _, policy := range *p {
 		if !policy.Container.Equal(communicatedContainer) {
 			continue
@@ -93,13 +100,15 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 							"targetSocket": targetSocket,
 						}).Trace("the relevant socket found")
 						relevantFields.Debug("the communication defined")
-						return true
+						judgement = true
+						break comparePolicy
 					}
 				}
 			}
 		}
 	}
 
-	relevantFields.Debug("the communication not defined")
-	return false
+	communicationCache.Set(communicationCacheKey{communicatedContainer, communicatedProcess, targetSocket}.String(), judgement,0)
+	relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
+	return
 }
