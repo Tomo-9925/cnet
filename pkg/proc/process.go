@@ -232,14 +232,14 @@ func RetrieveAllInodeFromRawOfPid(pid int, protocol gopacket.LayerType) (allInod
 }
 
 // SearchProcessOfContainerFromInode return Process struct of the process that have specific socket inode.
-func SearchProcessOfContainerFromInode(container *container.Container, socket *Socket, inode uint64) (process *Process, err error) {
+func SearchProcessOfContainerFromInode(communicatedContainer *container.Container, targetSocket *Socket, inode uint64) (process *Process, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
-		"communicated_container": container,
+		"communicated_container": communicatedContainer,
 		"inode": inode,
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	if cacheRawData, exist := inodeCache.Get(inodeCacheKey{container, socket, inode}.String()); exist {
+	if cacheRawData, exist := inodeCache.Get(inodeCacheKey{communicatedContainer, targetSocket, inode}.String()); exist {
 		var ok bool
 		process, ok = cacheRawData.(*Process)
 		if ok && SocketInodeExists(process.ID, inode) {
@@ -249,8 +249,19 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 		process = nil
 	}
 
+	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 && SocketInodeExists(container.DockerdPID, inode) {
+		process, err = MakeProcessStruct(container.DockerdPID)
+		if err != nil {
+			argFields.WithField("error", err).Debug("failed to search process of container from inode")
+			return
+		}
+		argFields.WithField("process", process).Debug("process exists")
+		inodeCache.Set(inodeCacheKey{communicatedContainer, targetSocket, inode}.String(), process, 0)
+		return
+	}
+
 	var containerdShimPid int
-	containerdShimPid, err = RetrievePPID(container.Pid)
+	containerdShimPid, err = RetrievePPID(communicatedContainer.Pid)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to search process of container from inode")
 		return
@@ -267,8 +278,12 @@ func SearchProcessOfContainerFromInode(container *container.Container, socket *S
 	for _, pid := range childPIDs {
 		if SocketInodeExists(pid, inode) {
 			process, err = MakeProcessStruct(pid)
+			if err != nil {
+				argFields.WithField("error", err).Debug("failed to search process of container from inode")
+				return
+			}
 			argFields.WithField("process", process).Debug("process exists")
-			inodeCache.Set(inodeCacheKey{container, socket, inode}.String(), process, 0)
+			inodeCache.Set(inodeCacheKey{communicatedContainer, targetSocket, inode}.String(), process, 0)
 			return
 		}
 	}

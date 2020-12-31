@@ -2,7 +2,10 @@ package container
 
 import (
 	"context"
+	"io/ioutil"
 	"net"
+	"strconv"
+	"unsafe"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
@@ -11,9 +14,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var dockerCli *client.Client
+var (
+	// DockerdPID is docker daemon pid
+	DockerdPID int
+
+	dockerCli  *client.Client
+)
 
 func init() {
+	// Initialize docker client
 	logrus.Debug("trying to initialize docker engine api client")
 	var err error
 	dockerCli, err = client.NewEnvClient()
@@ -22,6 +31,17 @@ func init() {
 		cliField.WithField("error", err).Fatal("faild to initialize docker engine api client")
 	}
 	cliField.Debug("docker engine api client initialized")
+
+	// Retrieve dockerd pid
+	var file []byte
+	file, err = ioutil.ReadFile("/var/run/docker.pid")
+	if err != nil {
+		logrus.WithField("error", err).Fatal("failed to retrieve dockerd process id")
+	}
+	DockerdPID, err = strconv.Atoi(*(*string)(unsafe.Pointer(&file)))
+	if err != nil {
+		logrus.WithField("error", err).Fatal("failed to retrieve dockerd process id")
+	}
 }
 
 // FetchDockerContainerInspections return the information slice of Docker container.
