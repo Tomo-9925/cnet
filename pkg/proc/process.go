@@ -58,7 +58,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 
 	// detect the process of raw socket
 	var inodes []uint64
-	inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid, socket.Protocol)
+	inodes, err = RetrieveAllInodeFromRawOfPid(container.Pid, socket)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to identify process of container")
 		return
@@ -106,21 +106,24 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 }
 
 // MakeRetrieveSocketEntryFunction return the function that retrieve socket entry of specific process id and protocol.
-func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retrieveFunction func() ([3]string, bool), err error) {
+func MakeRetrieveSocketEntryFunction(targetSocket *Socket, pid int) (retrieveFunction func() ([3]string, bool), err error) {
 	argFields := logrus.WithFields(logrus.Fields{
-		"protocol": protocol,
+		"target_socket": targetSocket,
 		"pid": pid,
 	})
 	argFields.Debug("trying to make the function that retrieve socket entry")
 
 	var netFilePath string
-	switch protocol {
+	switch targetSocket.Protocol {
 	case layers.LayerTypeTCP:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp")
 	case layers.LayerTypeUDP:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "udp")
 	default:
 		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
+	}
+	if targetSocket.LocalIP.To4() == nil {
+		netFilePath = strings.Join([]string{netFilePath, "6"}, "")
 	}
 
 	var file []byte
@@ -136,10 +139,11 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 	retrieveFunction = func() (entry [3]string, exist bool) {
 		argFields.Debugln("trying to retrieve entry of socket")
 
+		retrieveEntry:
 		for exist = entryScanner.Scan(); exist; exist = entryScanner.Scan() {
 			columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 			columnScanner.Split(bufio.ScanWords)
-			argFields.WithField("entry", entryScanner.Text()).Trace("checking the entry")
+			argFields.WithFields(logrus.Fields{"entry": entryScanner.Text(), "net_file_path": netFilePath}).Trace("checking the entry")
 			checkColumn:
 			for columnCounter := 0; columnScanner.Scan(); columnCounter++ {
 				switch columnCounter {
@@ -153,6 +157,7 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 				}
 			}
 			entryFields := logrus.Fields{
+				"net_file_path": netFilePath,
 				"local_address": entry[0],
 				"rem_address": entry[1],
 				"inode": entry[2],
@@ -165,6 +170,19 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 			return
 		}
 
+		// dealing with ipv4-mapped ipv6 address
+		if !strings.HasSuffix(netFilePath, "6") {
+			netFilePath = strings.Join([]string{netFilePath, "6"}, "")
+			file, err = ioutil.ReadFile(netFilePath)
+			if err != nil {
+				argFields.WithField("error", err).Debug("failed to search inode from net of pid")
+				return
+			}
+			entryScanner = bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
+			entryScanner.Scan()
+			goto retrieveEntry
+		}
+
 		argFields.Debugln("entry not exist")
 		return
 	}
@@ -174,23 +192,23 @@ func MakeRetrieveSocketEntryFunction(protocol gopacket.LayerType, pid int) (retr
 }
 
 // SearchInodeFromNetOfPid returns inode from net of a specific pid in proc filesystem.
-func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) {
+func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (inode uint64, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
-		"target_socket": socket,
+		"target_socket": targetSocket,
 		"pid": pid,
 	})
 	argFields.Debug("trying to search inode from net of pid")
 
 	// Make local_address and rem_address string
-	socketLocalPort := fmt.Sprintf("%04X", socket.LocalPort)
-	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(socket.RemoteIP), socket.RemotePort)
+	socketLocalPort := fmt.Sprintf("%04X", targetSocket.LocalPort)
+	socketRemoteAddr := fmt.Sprintf("%s:%04X", IPtoa(targetSocket.RemoteIP), targetSocket.RemotePort)
 	argFields.WithFields(logrus.Fields{
 		"socket_local_port_string": socketLocalPort,
 		"socket_remote_address_string": socketRemoteAddr,
 		}).Trace("the strings for comparison created")
 
 	// Search entry of net socket
-	retrieveSocketEntry, err := MakeRetrieveSocketEntryFunction(socket.Protocol, pid)
+	retrieveSocketEntry, err := MakeRetrieveSocketEntryFunction(targetSocket, pid)
 	if err != nil {
 		return
 	}
@@ -199,8 +217,8 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 			argFields.WithField("net_local_port", entry[0]).Trace("the entry skipped")
 			continue
 		}
-		// server process makes 00000000:0000 rem_address entry
-		if strings.HasSuffix(entry[1], "0000") || entry[1] == socketRemoteAddr {
+		// server process makes 00000000:0000 rem_address entry. remote address is a possible IPv4-mapped IPv6 address.
+		if strings.HasSuffix(entry[1], "0000") || strings.HasSuffix(entry[1], socketRemoteAddr) {
 			inode, err = strconv.ParseUint(entry[2], 10, 64)
 			argFields.WithField("socket_inode", inode).Debug("inode found")
 			return
@@ -212,12 +230,12 @@ func SearchInodeFromNetOfPid(socket *Socket, pid int) (inode uint64, err error) 
 }
 
 // RetrieveAllInodeFromRawOfPid return all inodes of specific process id.
-func RetrieveAllInodeFromRawOfPid(pid int, protocol gopacket.LayerType) (allInode []uint64, err error) {
+func RetrieveAllInodeFromRawOfPid(pid int, targetSocket *Socket) (allInode []uint64, err error) {
 	argFields := logrus.WithField("process_id", pid)
 	argFields.Debug("trying to retrieve all inode from net of pid")
 
 	var retrieveSocketEntry func() ([3]string, bool)
-	retrieveSocketEntry, err = MakeRetrieveSocketEntryFunction(protocol, pid)
+	retrieveSocketEntry, err = MakeRetrieveSocketEntryFunction(targetSocket, pid)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to retrieve all inode from net of pid")
 		return
@@ -371,6 +389,7 @@ func RetrievePPID(pid int) (ppid int, err error) {
 // 	return
 // }
 
+// retrieveChildren gets the child processes from children of process filesystem.
 func retrieveChildren(pid int) (result []int, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve the children")
@@ -405,6 +424,8 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 	argFields.Debug("trying to retrieve child pids")
 
 	var searchPIDStack pidStack
+
+	// procfs children method (not exactly)
 	var retrievedChildren []int
 	for {
 		retrievedChildren, err = retrieveChildren(pid)
@@ -420,7 +441,7 @@ func RetrieveChildPIDs(pid int) (childPIDSlice []int, err error) {
 		childPIDSlice = append(childPIDSlice, pid)
 	}
 
-	// python psutil method (no need now)
+	// python psutil method (take a lot of time)
 	// childPIDMap := makeChildPIDMap()
 	// searchPIDStack.Push(childPIDMap[pid]...)
 	// for searchPIDStack.Len() != 0 {
@@ -492,7 +513,7 @@ func NSpidExists(pid int, nspidStr string) bool {
 	return false
 }
 
-// RetrieveProcessName gets the process name from stat of proc filesystem.
+// RetrieveProcessName gets the process name from stat of proccess filesystem.
 func RetrieveProcessName(pid int) (executable string, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve process name")
@@ -508,7 +529,7 @@ func RetrieveProcessName(pid int) (executable string, err error) {
 	return
 }
 
-// RetrieveProcessPath gets the process path from stat of proc filesystem.
+// RetrieveProcessPath gets the process path from stat of proccess filesystem.
 func RetrieveProcessPath(pid int) (path string, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve process path")

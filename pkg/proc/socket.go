@@ -30,6 +30,10 @@ const (
 	out
 )
 
+type packetIPAddr struct {
+	src, dst net.IP
+}
+
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
 func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
@@ -38,29 +42,40 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	})
 	argFields.Debug("trying to check socket and communicated container")
 
+	socket = &Socket{}
+
 	// Check the protocol of network layer
-	// This program only supports IPv4
-	ipLayer := (*packet).Layer(layers.LayerTypeIPv4)
-	if ipLayer == nil {
-		err = errors.New("packet not contained ipv4 layer")
+	var ip packetIPAddr
+	switch (*packet).NetworkLayer().LayerType() {
+	case layers.LayerTypeIPv4:
+		networkLayer := (*packet).Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+		ip.src =	networkLayer.SrcIP
+		ip.dst =	networkLayer.DstIP
+		socket.Protocol = networkLayer.NextLayerType()
+	case layers.LayerTypeIPv6:
+		networkLayer := (*packet).Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+		ip.src =	networkLayer.SrcIP
+		ip.dst =	networkLayer.DstIP
+		socket.Protocol = networkLayer.NextLayerType()
+	default:
+		err = errors.New("the network layer protocol not supported")
 		argFields.WithField("error", err).Debug("failed to check socket and communicated container")
 		return
 	}
-	ip, _ := ipLayer.(*layers.IPv4)
 
 	// Check container and direction, local IP, remote IP
 	var packetDirection direction
 	for _, container := range containers {
 		for _, ipAddr := range container.IPAddresses {
-			if ip.SrcIP.Equal(ipAddr) {
+			if ip.src.Equal(ipAddr) {
 				packetDirection = out
 				communicatedContainer = container
-				socket = &Socket{LocalIP: ip.SrcIP, RemoteIP: ip.DstIP}
+				socket.LocalIP, socket.RemoteIP = ip.src, ip.dst
 				break
-			} else if ip.DstIP.Equal(ipAddr) {
+			} else if ip.dst.Equal(ipAddr) {
 				packetDirection = in
 				communicatedContainer = container
-				socket = &Socket{LocalIP: ip.DstIP, RemoteIP: ip.SrcIP}
+				socket.LocalIP, socket.RemoteIP = ip.dst, ip.src
 				break
 			}
 		}
@@ -72,7 +87,6 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	}
 
 	// Check the protocol inside network layer
-	socket.Protocol = ip.NextLayerType()
 	switch socket.Protocol {
 	case layers.LayerTypeTCP:
 		tcp, _ := (*packet).Layer(layers.LayerTypeTCP).(*layers.TCP)

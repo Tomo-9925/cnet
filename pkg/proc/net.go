@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"strings"
 	"unsafe"
 
 	"github.com/sirupsen/logrus"
@@ -34,10 +35,25 @@ func IPtoa(ip net.IP) (ipStr string) {
 	argFields.Debug("trying to convert the ip address into string for net")
 
 	ipv4 := ip.To4()
-	// IPv6 not supported
 	if ipv4 == nil {
-		argFields.WithField("message", "ipv6 not supported").Debug("failed to convert ip address into string for net")
-		return
+		ipBytes := ([]byte)(ip)
+		var ipStrs []string = make([]string, 4)
+		for i := 0; i < 16 ; i += 4 {
+			tmpInt := big.NewInt(0)
+			tmpInt.SetBytes(ipBytes[i:i+4])
+			buf := new(bytes.Buffer)
+			err := binary.Write(buf, HostByteOrder, uint32(tmpInt.Uint64()))
+			if err != nil {
+				argFields.WithFields(logrus.Fields{
+					"error": err,
+					"tmp_int": tmpInt,
+					}).Debug("trying to convert ip address into string for net")
+				return
+			}
+			ipStrs = append(ipStrs, fmt.Sprintf("%X", buf.Bytes()))
+		}
+		argFields.WithField("ip_address_string", ipStr).Debug("the ip address converted")
+		return strings.Join(ipStrs, "")
 	}
 
 	ipv4Int := big.NewInt(0)
