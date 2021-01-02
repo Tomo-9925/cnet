@@ -3,7 +3,6 @@ version: '3'
 services:
   db:
     image: mariadb:10.5
-    command: "--bind-address=0.0.0.0"
     container_name: cnet_db
     environment:
       MYSQL_ROOT_PASSWORD: vFt5SH9YQbPQ
@@ -18,7 +17,8 @@ services:
     ports:
       - "3306:3306"
   wordpress:
-    image: wordpress:5.6-php7.4-apache
+    build: .
+    image: cnet_wordpress
     container_name: cnet_wordpress
     depends_on:
       - db
@@ -27,6 +27,7 @@ services:
       WORDPRESS_DB_NAME: cnet_wp
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_CONFIG_EXTRA: "define('DISABLE_WP_CRON', true);"
     networks:
       cnet_wp:
         ipv4_address: 192.168.3.3

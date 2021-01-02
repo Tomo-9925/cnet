@@ -10,8 +10,24 @@ policies:
           - protocol: "tcp"
             remote_ip: "192.168.3.2"
             remote_port: 3306
-          - protocol: "udp"
-            remote_port: 53
+          - protocol: "tcp"
+            remote_ip: "198.143.164.250"  # downloads.wordpress.org
+            remote_port: 443
+          - protocol: "tcp"
+            remote_ip: "198.143.164.251"  # api.wordpress.org
+            remote_port: 443
+          - protocol: "tcp"
+            remote_ip: "198.143.164.252"  # wordpress.org
+            remort_port: 443
+      - processes:
+          - path: "/usr/local/bin/php"
+        sockets:
+          - protocol: "tcp"
+            remote_ip: "198.143.164.251"
+            remote_port: 443
+          - protocol: "tcp"
+            remote_ip: "198.143.164.252"
+            remort_port: 443
   - container:
       name: "cnet_db"
     communications:
