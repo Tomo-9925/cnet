@@ -208,7 +208,8 @@ func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (inode uint64, err e
 		}).Trace("the strings for comparison created")
 
 	// Search entry of net socket
-	retrieveSocketEntry, err := MakeRetrieveSocketEntryFunction(targetSocket, pid)
+	var retrieveSocketEntry func() ([3]string, bool)
+	retrieveSocketEntry, err = MakeRetrieveSocketEntryFunction(targetSocket, pid)
 	if err != nil {
 		return
 	}
@@ -224,7 +225,7 @@ func SearchInodeFromNetOfPid(targetSocket *Socket, pid int) (inode uint64, err e
 			return
 		}
 	}
-	err = errors.New("inode not found")
+	err = errors.New("applicable communication entry not found")
 	argFields.WithField("error", err).Debug("failed to search inode from net of pid")
 	return
 }
