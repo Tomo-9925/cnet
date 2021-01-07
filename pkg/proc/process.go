@@ -92,12 +92,13 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			return
 		}
 	}
-	if socket.Protocol == layers.LayerTypeICMPv4 {
+	switch socket.Protocol {
+	case layers.LayerTypeICMPv4, layers.LayerTypeICMPv6:
 		var identifier uint16
-		identifier, err = CheckIdentifierOfICMPv4(packet)
+		identifier, err = CheckIdentifierOfICMP(socket, packet)
 		if err != nil {
 			argFields.WithField("error", err).Trace("failed to identify process of container with identifier method")
-			return
+			break
 		}
 		identifierStr := strconv.FormatUint(uint64(identifier), 10)
 		for suspiciousProcess := range suspiciousProcesses {

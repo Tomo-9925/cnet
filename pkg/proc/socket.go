@@ -114,24 +114,42 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	return
 }
 
-// CheckIdentifierOfICMPv4 returns identifier from icmp packet.
-func CheckIdentifierOfICMPv4(packet *gopacket.Packet) (identifier uint16, err error) {
+// CheckIdentifierOfICMP returns identifier from icmp packet.
+func CheckIdentifierOfICMP(socket *Socket, packet *gopacket.Packet) (identifier uint16, err error) {
 	argFields := logrus.WithField("packet", packet)
-	argFields.Debug("trying to check type code and identifier of icmp")
+	argFields.Debug("trying to identifier of the icmp packet")
 
-	icmpv4Layer := (*packet).Layer(layers.LayerTypeICMPv4)
-	if icmpv4Layer == nil {
-		err = errors.New("icmpv4 layer not found")
-		argFields.WithField("error", err).Debug("failed to check type code and identifier of icmpv4")
-		return
+	switch socket.Protocol {
+	case layers.LayerTypeICMPv4:
+		icmpv4, _ := (*packet).Layer(layers.LayerTypeICMPv4).(*layers.ICMPv4)
+		switch icmpv4.TypeCode {
+		case layers.ICMPv4TypeEchoRequest, layers.ICMPv4TypeEchoReply,
+		layers.ICMPv4TypeTimestampRequest, layers.ICMPv4TypeTimestampReply,
+		layers.ICMPv4TypeAddressMaskRequest, layers.ICMPv4TypeAddressMaskReply:
+			identifier = icmpv4.Id
+		default:
+			err = errors.New("identifier not found")
+		}
+	case layers.LayerTypeICMPv6:
+		icmpv6, _ := (*packet).Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6)
+		icmpv6Type := icmpv6.NextLayerType()
+		if icmpv6Type != layers.LayerTypeICMPv6Echo {
+			err = errors.New("identifier not found")
+			break
+		}
+		icmpv6Echo, _ := (*packet).Layer(layers.LayerTypeICMPv6Echo).(*layers.ICMPv6Echo)
+		identifier = icmpv6Echo.Identifier
+	default:
+		err = errors.New("icmp packet not found")
 	}
 
-	icmpv4, _ := icmpv4Layer.(*layers.ICMPv4)
-	identifier = icmpv4.Id
-
-	argFields.WithFields(logrus.Fields{
-		"identifier": identifier,
-	}).Debug("checked type code and identifier of icmpv4")
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to check type code and identifier of icmp")
+	} else {
+		argFields.WithFields(logrus.Fields{
+			"identifier": identifier,
+		}).Debug("identifier of the icmp packet found")
+	}
 	return
 }
 
