@@ -40,6 +40,16 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 	})
 	argFields.Debug("trying to identify process of container")
 
+	if cacheRawData, exist := SocketCache.Get(socket.String()); exist {
+		var ok bool
+		process, ok = cacheRawData.(*Process)
+		if ok {
+			argFields.WithField("identified_process", process).Debug("the process identified")
+			return
+		}
+		process = nil
+	}
+
 	switch socket.Protocol {
 	case layers.LayerTypeTCP, layers.LayerTypeUDP:
 		var inode uint64
@@ -53,6 +63,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			argFields.WithField("error", err).Debug("failed to indentify process of container")
 		}
 		argFields.WithField("identified_process", process).Debug("the process identified")
+		SocketCache.Set(socket.String(), process, 0)
 		return
 	}
 
@@ -77,6 +88,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		for suspiciousProcess := range suspiciousProcesses {
 			process = &suspiciousProcess
 			argFields.WithField("identified_process", process).Debug("the process identified")
+			SocketCache.Set(socket.String(), process, 0)
 			return
 		}
 	}
@@ -92,6 +104,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			if NSpidExists(suspiciousProcess.ID, identifierStr) {
 				process = &suspiciousProcess
 				argFields.WithField("identified_process", process).Debug("the process identified")
+				SocketCache.Set(socket.String(), process, 0)
 				return
 			}
 		}
@@ -258,16 +271,6 @@ func SearchProcessOfContainerFromInode(communicatedContainer *container.Containe
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	if cacheRawData, exist := inodeCache.Get(inodeCacheKey{communicatedContainer, targetSocket, inode}.String()); exist {
-		var ok bool
-		process, ok = cacheRawData.(*Process)
-		if ok && SocketInodeExists(process.ID, inode) {
-			argFields.WithField("process", process).Debug("process exists")
-			return
-		}
-		process = nil
-	}
-
 	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 && SocketInodeExists(container.DockerdPID, inode) {
 		process, err = MakeProcessStruct(container.DockerdPID)
 		if err != nil {
@@ -275,7 +278,6 @@ func SearchProcessOfContainerFromInode(communicatedContainer *container.Containe
 			return
 		}
 		argFields.WithField("process", process).Debug("process exists")
-		inodeCache.Set(inodeCacheKey{communicatedContainer, targetSocket, inode}.String(), process, 0)
 		return
 	}
 
@@ -302,7 +304,6 @@ func SearchProcessOfContainerFromInode(communicatedContainer *container.Containe
 				return
 			}
 			argFields.WithField("process", process).Debug("process exists")
-			inodeCache.Set(inodeCacheKey{communicatedContainer, targetSocket, inode}.String(), process, 0)
 			return
 		}
 	}
