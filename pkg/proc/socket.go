@@ -49,13 +49,13 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	switch (*packet).NetworkLayer().LayerType() {
 	case layers.LayerTypeIPv4:
 		networkLayer := (*packet).Layer(layers.LayerTypeIPv4).(*layers.IPv4)
-		ip.src =	networkLayer.SrcIP
-		ip.dst =	networkLayer.DstIP
+		ip.src = networkLayer.SrcIP
+		ip.dst = networkLayer.DstIP
 		socket.Protocol = networkLayer.NextLayerType()
 	case layers.LayerTypeIPv6:
 		networkLayer := (*packet).Layer(layers.LayerTypeIPv6).(*layers.IPv6)
-		ip.src =	networkLayer.SrcIP
-		ip.dst =	networkLayer.DstIP
+		ip.src = networkLayer.SrcIP
+		ip.dst = networkLayer.DstIP
 		socket.Protocol = networkLayer.NextLayerType()
 	default:
 		err = errors.New("the network layer protocol not supported")
@@ -65,18 +65,19 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 
 	// Check container and direction, local IP, remote IP
 	var packetDirection direction
+	setIPOfSocket:
 	for _, container := range containers {
 		for _, ipAddr := range container.IPAddresses {
 			if ip.src.Equal(ipAddr) {
 				packetDirection = out
 				communicatedContainer = container
 				socket.LocalIP, socket.RemoteIP = ip.src, ip.dst
-				break
+				break setIPOfSocket
 			} else if ip.dst.Equal(ipAddr) {
 				packetDirection = in
 				communicatedContainer = container
 				socket.LocalIP, socket.RemoteIP = ip.dst, ip.src
-				break
+				break setIPOfSocket
 			}
 		}
 	}
