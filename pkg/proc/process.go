@@ -530,7 +530,7 @@ func RetrieveProcessName(pid int) (executable string, err error) {
 	return
 }
 
-// RetrieveProcessPath gets the process path from stat of proccess filesystem.
+// RetrieveProcessPath gets the process path from stat of process filesystem.
 func RetrieveProcessPath(pid int) (path string, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve process path")
