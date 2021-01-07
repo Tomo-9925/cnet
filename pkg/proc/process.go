@@ -514,7 +514,7 @@ func NSpidExists(pid int, nspidStr string) bool {
 	return false
 }
 
-// RetrieveProcessName gets the process name from stat of proccess filesystem.
+// RetrieveProcessName gets the process name from stat of process filesystem.
 func RetrieveProcessName(pid int) (executable string, err error) {
 	argFields := logrus.WithField("pid", pid)
 	argFields.Debug("trying to retrieve process name")
