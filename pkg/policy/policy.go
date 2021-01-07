@@ -69,7 +69,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	})
 	relevantFields.Debug("checking whether define the communication in this policies")
 
-	if cacheRawData, exist := communicationCache.Get(communicationCacheKey{communicatedContainer, communicatedProcess, targetSocket}.String()); exist {
+	if cacheRawData, exist := CommunicationCache.Get(communicationCacheKey{communicatedProcess, targetSocket}.String()); exist {
 		judgement = cacheRawData.(bool)
 		relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
 		return
@@ -117,7 +117,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 		}
 	}
 
-	communicationCache.Set(communicationCacheKey{communicatedContainer, communicatedProcess, targetSocket}.String(), judgement,0)
+	CommunicationCache.Set(communicationCacheKey{communicatedProcess, targetSocket}.String(), judgement,0)
 	relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
 	return
 }

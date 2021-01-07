@@ -57,7 +57,7 @@ func main() {
 
 			logrus.Infoln("clear cache")
 			proc.SocketCache.Flush()
-			policy.ClearCommunicationCache()
+			policy.CommunicationCache.Flush()
 		case cid := <-killCh:
 			//Removing finished containers from monitoring
 			container.RemoveContainerFromSlice(containers, cid)
@@ -67,7 +67,7 @@ func main() {
 			}).Info("container information removed")
 			logrus.Infoln("clear cache")
 			proc.SocketCache.Flush()
-			policy.ClearCommunicationCache()
+			policy.CommunicationCache.Flush()
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:
