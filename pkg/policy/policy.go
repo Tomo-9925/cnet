@@ -60,7 +60,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 type Policies []*Policy
 
 // IsDefined reports whether the policy is defined.
-func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) (judgement bool) {
+func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) (judgement bool) { ////nolint:gocognit
 	relevantFields := logrus.WithFields(logrus.Fields{
 		"policies": *p,
 		"communicated_container": communicatedContainer,
