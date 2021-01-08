@@ -144,7 +144,7 @@ func CheckIdentifierOfICMP(socket *Socket, packet *gopacket.Packet) (identifier 
 		icmpv6Echo, _ := (*packet).Layer(layers.LayerTypeICMPv6Echo).(*layers.ICMPv6Echo)
 		identifier = icmpv6Echo.Identifier
 	default:
-		err = errors.New("icmp packet not found")
+		err = errors.New("this packet is not icmp protocol")
 	}
 
 	if err != nil {
