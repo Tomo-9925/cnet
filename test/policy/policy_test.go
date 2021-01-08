@@ -10,10 +10,6 @@ import (
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-var (
-
-)
-
 func TestSocketIsDefined(t *testing.T) {
 	const (
 		satisfy bool = iota % 2 == 0
@@ -41,13 +37,13 @@ func TestSocketIsDefined(t *testing.T) {
 			for satisfySocket, targetSocket := range testTargetSocket {
 				if satisfyContainer && satisfyProcess && satisfySocket {
 					if !expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
-						t.Error("defined test communication not passed")
+						t.Error("It was not determined that an expected communication was defined", targetContainer, targetProcess, targetSocket)
 					}
 					targetSocket.LocalPort = uint16(portRand.Uint32())
 					continue
 				}
 				if expectedPolicies.IsDefined(targetContainer, targetProcess, targetSocket) {
-					t.Error("undefined test communication passed", targetContainer, targetProcess, targetSocket)
+					t.Error("It was determined that an unexpected communication was defined", targetContainer, targetProcess, targetSocket)
 				}
 				targetSocket.LocalPort = uint16(portRand.Uint32())
 			}
