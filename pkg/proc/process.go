@@ -2,6 +2,7 @@ package proc
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -127,33 +128,40 @@ func MakeRetrieveSocketEntryFunction(targetSocket *Socket, pid int) (retrieveFun
 	})
 	argFields.Debug("trying to make the function that retrieve socket entry")
 
+	// dealing with ipv4-mapped ipv6 address
 	var netFilePath string
 	switch targetSocket.Protocol {
 	case layers.LayerTypeTCP:
-		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp")
+		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "tcp6")
 	case layers.LayerTypeUDP:
-		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "udp")
+		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "udp6")
 	default:
-		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw")
-	}
-	if targetSocket.LocalIP.To4() == nil {
-		netFilePath = strings.Join([]string{netFilePath, "6"}, "")
+		netFilePath = filepath.Join(procPath, strconv.Itoa(pid), "net", "raw6")
 	}
 
-	var file []byte
-	file, err = ioutil.ReadFile(netFilePath)
+	// dealing with ipv4-mapped ipv6 address
+	var communicationEntries []byte
+	communicationEntries, err = ioutil.ReadFile(netFilePath)
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to search inode from net of pid")
 		return
 	}
+	communicationEntries = communicationEntries[bytes.Index(communicationEntries, []byte("\n"))+1:]
+	if targetSocket.LocalIP.To4() != nil {
+		var v4Entries []byte
+		v4Entries, err = ioutil.ReadFile(netFilePath[:len(netFilePath)-1])
+		if err != nil {
+			argFields.WithField("error", err).Debug("failed to search inode from net of pid")
+			return
+		}
+		v4Entries = v4Entries[bytes.Index(v4Entries, []byte("\n"))+1:]
+		communicationEntries = bytes.Join([][]byte{communicationEntries, v4Entries}, []byte{})
+	}
 
-	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
-	entryScanner.Scan() // Skip header line
-
+	entryScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&communicationEntries))))
 	retrieveFunction = func() (entry [3]string, exist bool) {
 		argFields.Debugln("trying to retrieve entry of socket")
 
-		retrieveEntry:
 		for exist = entryScanner.Scan(); exist; exist = entryScanner.Scan() {
 			columnScanner := bufio.NewScanner(strings.NewReader(entryScanner.Text()))
 			columnScanner.Split(bufio.ScanWords)
@@ -183,20 +191,6 @@ func MakeRetrieveSocketEntryFunction(targetSocket *Socket, pid int) (retrieveFun
 			argFields.WithFields(entryFields).Debug("entry retrieved")
 			return
 		}
-
-		// dealing with ipv4-mapped ipv6 address
-		if !strings.HasSuffix(netFilePath, "6") {
-			netFilePath = strings.Join([]string{netFilePath, "6"}, "")
-			file, err = ioutil.ReadFile(netFilePath)
-			if err != nil {
-				argFields.WithField("error", err).Debug("failed to search inode from net of pid")
-				return
-			}
-			entryScanner = bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
-			entryScanner.Scan()
-			goto retrieveEntry
-		}
-
 		argFields.Debugln("entry not exist")
 		return
 	}
