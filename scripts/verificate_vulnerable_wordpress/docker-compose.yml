@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  db:
+    image: mariadb:10.5
+    container_name: cnet_db
+    environment:
+      MYSQL_ROOT_PASSWORD: vFt5SH9YQbPQ
+      MYSQL_DATABASE: cnet_wp
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      cnet_wp:
+        ipv4_address: 192.168.3.2
+  wordpress:
+    build: .
+    image: cnet_wordpress
+    container_name: cnet_wordpress
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: cnet_wp
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_CONFIG_EXTRA: "define('DISABLE_WP_CRON', true);"
+    networks:
+      cnet_wp:
+        ipv4_address: 192.168.3.3
+    ports:
+      - "8080:80"
+
+volumes:
+  db_data:
+
+networks:
+  cnet_wp:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.3.0/16

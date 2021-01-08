@@ -17,12 +17,12 @@ func deinit() {
 		"queue_num": queueNum,
 	}).Info("the nfqueue rule deleted")
 
+	logrus.WithField("logfile", logFile).Infoln("cnet quits")
+
 	if !debug {
 		err = logFile.Close()
 		if err != nil {
 			logrus.WithField("error", err).Error("failed to close log file")
 		}
 	}
-
-	logrus.WithField("logfile", logFile).Infoln("cnet quits")
 }

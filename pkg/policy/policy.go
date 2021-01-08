@@ -1,11 +1,11 @@
 package policy
 
 import (
-	"bytes"
 	"fmt"
 	"net"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/proc"
@@ -50,9 +50,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 		return false
 	} else if s.RemotePort != 0 && s.RemotePort != x.RemotePort {
 		return false
-	} else if !bytes.Equal(s.RemoteIP.Mask, net.IPMask{}) && !s.RemoteIP.Contains(x.RemoteIP) {
-		return false
-	} else if !s.RemoteIP.IP.Equal(net.IP{}) && !s.RemoteIP.IP.Equal(x.RemoteIP) {
+	} else if s.RemoteIP != nil && !s.RemoteIP.Contains(x.RemoteIP) {
 		return false
 	}
 	return true
@@ -62,7 +60,7 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 type Policies []*Policy
 
 // IsDefined reports whether the policy is defined.
-func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) bool {
+func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) (judgement bool) {
 	relevantFields := logrus.WithFields(logrus.Fields{
 		"policies": *p,
 		"communicated_container": communicatedContainer,
@@ -71,7 +69,22 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	})
 	relevantFields.Debug("checking whether define the communication in this policies")
 
+	if cacheRawData, exist := PolicyCache.Get(targetSocket.Hash()); exist {
+		judgement = cacheRawData.(bool)
+		relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
+		return
+	}
+
+	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 {
+		dockerdPath, err := proc.RetrieveProcessPath(container.DockerdPID)
+		if err == nil && communicatedProcess.Path == dockerdPath {
+			relevantFields.Debug("the dns request is assumed to be defined")
+			return true
+		}
+	}
+
 	// HACK: So many indents that it's hard to understand. The structure of Policies may need to be rethought.
+	comparePolicy:
 	for _, policy := range *p {
 		if !policy.Container.Equal(communicatedContainer) {
 			continue
@@ -96,13 +109,15 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 							"targetSocket": targetSocket,
 						}).Trace("the relevant socket found")
 						relevantFields.Debug("the communication defined")
-						return true
+						judgement = true
+						break comparePolicy
 					}
 				}
 			}
 		}
 	}
 
-	relevantFields.Debug("the communication not defined")
-	return false
+	PolicyCache.Set(targetSocket.Hash(), judgement,0)
+	relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
+	return
 }

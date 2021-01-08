@@ -49,7 +49,9 @@ Temporary Items
 
 # cnet
 cmd/cnet/*.yml
-cmd/cnet/*.log
+*.log
+*.gz
+!Dockerfile
 
 # Visual Studio Code
 .vscode/*

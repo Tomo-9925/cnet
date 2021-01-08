@@ -104,7 +104,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	}
 	startedContainer := &cnetContainer.Container{
 		ID: inspect.ID,
-		IP: net.ParseIP(inspect.NetworkSettings.IPAddress),
+		IPAddresses: []net.IP{net.ParseIP(inspect.NetworkSettings.IPAddress)},
 		Name: inspect.Name,
 		Pid: inspect.State.Pid,
 	}
@@ -117,7 +117,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !socket.LocalIP.Equal(startedContainer.IP) {
+	if !socket.LocalIP.Equal(startedContainer.IPAddresses[0]) {
 		t.Error("local ip address not located correctly")
 	}
 	if !socket.RemoteIP.Equal(net.ParseIP(netcatDestination)) {

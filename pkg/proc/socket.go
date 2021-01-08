@@ -23,6 +23,10 @@ func (s *Socket)String() string {
 		s.Protocol, s.LocalIP, s.LocalPort, s.RemoteIP, s.RemotePort)
 }
 
+func (s *Socket)Hash() string {
+	return fmt.Sprintf("%X%X%X%X%X", s.Protocol, s.LocalIP, s.RemoteIP, s.LocalPort, s.RemotePort)
+}
+
 type direction bool
 
 const (
@@ -30,11 +34,9 @@ const (
 	out
 )
 
-// NOTE: ICMP packets containing identifier may be able to support.
-// var supportedProtocol []gopacket.LayerType = []gopacket.LayerType{
-// 	layers.LayerTypeTCP,
-// 	layers.LayerTypeUDP,
-// }
+type packetIPAddr struct {
+	src, dst net.IP
+}
 
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
 func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
@@ -44,29 +46,43 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	})
 	argFields.Debug("trying to check socket and communicated container")
 
+	socket = &Socket{}
+
 	// Check the protocol of network layer
-	// This program only supports IPv4
-	ipLayer := (*packet).Layer(layers.LayerTypeIPv4)
-	if ipLayer == nil {
-		err = errors.New("packet not contained ipv4 layer")
+	var ip packetIPAddr
+	switch (*packet).NetworkLayer().LayerType() {
+	case layers.LayerTypeIPv4:
+		networkLayer := (*packet).Layer(layers.LayerTypeIPv4).(*layers.IPv4)
+		ip.src = networkLayer.SrcIP
+		ip.dst = networkLayer.DstIP
+		socket.Protocol = networkLayer.NextLayerType()
+	case layers.LayerTypeIPv6:
+		networkLayer := (*packet).Layer(layers.LayerTypeIPv6).(*layers.IPv6)
+		ip.src = networkLayer.SrcIP
+		ip.dst = networkLayer.DstIP
+		socket.Protocol = networkLayer.NextLayerType()
+	default:
+		err = errors.New("the network layer protocol not supported")
 		argFields.WithField("error", err).Debug("failed to check socket and communicated container")
 		return
 	}
-	ip, _ := ipLayer.(*layers.IPv4)
 
 	// Check container and direction, local IP, remote IP
 	var packetDirection direction
+	setIPOfSocket:
 	for _, container := range containers {
-		if ip.SrcIP.Equal(container.IP) {
-			packetDirection = out
-			communicatedContainer = container
-			socket = &Socket{LocalIP: ip.SrcIP, RemoteIP: ip.DstIP}
-			break
-		} else if ip.DstIP.Equal(container.IP) {
-			packetDirection = in
-			communicatedContainer = container
-			socket = &Socket{LocalIP: ip.DstIP, RemoteIP: ip.SrcIP}
-			break
+		for _, ipAddr := range container.IPAddresses {
+			if ip.src.Equal(ipAddr) {
+				packetDirection = out
+				communicatedContainer = container
+				socket.LocalIP, socket.RemoteIP = ip.src, ip.dst
+				break setIPOfSocket
+			} else if ip.dst.Equal(ipAddr) {
+				packetDirection = in
+				communicatedContainer = container
+				socket.LocalIP, socket.RemoteIP = ip.dst, ip.src
+				break setIPOfSocket
+			}
 		}
 	}
 	if communicatedContainer == nil {
@@ -76,7 +92,6 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	}
 
 	// Check the protocol inside network layer
-	socket.Protocol = ip.NextLayerType()
 	switch socket.Protocol {
 	case layers.LayerTypeTCP:
 		tcp, _ := (*packet).Layer(layers.LayerTypeTCP).(*layers.TCP)
@@ -103,23 +118,42 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	return
 }
 
-func CheckIdentifierOfICMPv4(packet *gopacket.Packet) (identifier uint16, err error) {
+// CheckIdentifierOfICMP returns identifier from icmp packet.
+func CheckIdentifierOfICMP(socket *Socket, packet *gopacket.Packet) (identifier uint16, err error) {
 	argFields := logrus.WithField("packet", packet)
-	argFields.Debug("trying to check type code and identifier of icmp")
+	argFields.Debug("trying to identifier of the icmp packet")
 
-	icmpv4Layer := (*packet).Layer(layers.LayerTypeICMPv4)
-	if icmpv4Layer == nil {
-		err = errors.New("icmpv4 layer not found")
-		argFields.WithField("error", err).Debug("failed to check type code and identifier of icmpv4")
-		return
+	switch socket.Protocol {
+	case layers.LayerTypeICMPv4:
+		icmpv4, _ := (*packet).Layer(layers.LayerTypeICMPv4).(*layers.ICMPv4)
+		switch icmpv4.TypeCode {
+		case layers.ICMPv4TypeEchoRequest, layers.ICMPv4TypeEchoReply,
+		layers.ICMPv4TypeTimestampRequest, layers.ICMPv4TypeTimestampReply,
+		layers.ICMPv4TypeAddressMaskRequest, layers.ICMPv4TypeAddressMaskReply:
+			identifier = icmpv4.Id
+		default:
+			err = errors.New("identifier not found")
+		}
+	case layers.LayerTypeICMPv6:
+		icmpv6, _ := (*packet).Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6)
+		icmpv6Type := icmpv6.NextLayerType()
+		if icmpv6Type != layers.LayerTypeICMPv6Echo {
+			err = errors.New("identifier not found")
+			break
+		}
+		icmpv6Echo, _ := (*packet).Layer(layers.LayerTypeICMPv6Echo).(*layers.ICMPv6Echo)
+		identifier = icmpv6Echo.Identifier
+	default:
+		err = errors.New("this packet is not icmp protocol")
 	}
 
-	icmpv4, _ := icmpv4Layer.(*layers.ICMPv4)
-	identifier = icmpv4.Id
-
-	argFields.WithFields(logrus.Fields{
-		"identifier": identifier,
-	}).Debug("checked type code and identifier of icmpv4")
+	if err != nil {
+		argFields.WithField("error", err).Debug("failed to check type code and identifier of icmp")
+	} else {
+		argFields.WithFields(logrus.Fields{
+			"identifier": identifier,
+		}).Debug("identifier of the icmp packet found")
+	}
 	return
 }
 

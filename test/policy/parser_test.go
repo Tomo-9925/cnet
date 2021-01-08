@@ -35,7 +35,7 @@ var (
         Path: testProcessPath}},
       Sockets: []*policy.Socket{{
         Protocol: testSocketProtocol,
-        RemoteIP: &net.IPNet{IP: testSocketRemoteIP},
+        RemoteIP: &net.IPNet{IP: testSocketRemoteIP, Mask: net.CIDRMask(32, 32)},
         RemotePort: testSocketRemotePort}},
     }},
   }}

@@ -34,7 +34,7 @@ type yamlPolicies struct {
 }
 
 // ParseSecurityPolicy return the information slice of policy.
-func ParseSecurityPolicy(path string) (policies Policies, err error) {
+func ParseSecurityPolicy(path string) (parsedPolicies Policies, err error) {
 	pathField := logrus.WithField("path", path)
 	pathField.Debug("trying to parse security policy")
 
@@ -53,49 +53,50 @@ func ParseSecurityPolicy(path string) (policies Policies, err error) {
 	}
 
 	// Make Policies
-	var parsedPolicies Policies
-	for _, yamlPolicy := range yamlData.Policies {
-		var parsedPolicy Policy
-		parsedPolicy.Container = &container.Container{
+	parsedPolicies = make(Policies, len(yamlData.Policies))
+	for i, yamlPolicy := range yamlData.Policies {
+		parsedPolicy := &Policy{Container: &container.Container{
 			Name: yamlPolicy.Container.Name,
 			ID: yamlPolicy.Container.ID,
-		}
-		for _, yamlCommunication := range yamlPolicy.Communications {
-			var communication Communication
-			for _, yamlProcess := range yamlCommunication.Processes {
-				communication.Processes = append(communication.Processes, &proc.Process{
+		}}
+		parsedPolicies[i] = parsedPolicy
+		parsedPolicy.Communications = make([]*Communication, len(yamlPolicy.Communications))
+		for j, yamlCommunication := range yamlPolicy.Communications {
+			parsedCommunication := &Communication{}
+			parsedPolicy.Communications[j] = parsedCommunication
+			parsedCommunication.Processes = make([]*proc.Process, len(yamlCommunication.Processes))
+			for k, yamlProcess := range yamlCommunication.Processes {
+				parsedCommunication.Processes[k] = &proc.Process{
 					Executable: yamlProcess.Executable,
 					Path: yamlProcess.Path,
-				})
+				}
 			}
-			for _, yamlSocket := range yamlCommunication.Sockets {
-				socket := &Socket{
+			parsedCommunication.Sockets = make([]*Socket, len(yamlCommunication.Sockets))
+			for k, yamlSocket := range yamlCommunication.Sockets {
+				parsedSocket := &Socket{
 					LocalPort: yamlSocket.LocalPort,
 					RemotePort: yamlSocket.RemotePort,
 				}
+				parsedCommunication.Sockets[k] = parsedSocket
 				protocol := strings.ToLower(yamlSocket.Protocol)
 				switch protocol {
 				case "tcp":
-					socket.Protocol = layers.LayerTypeTCP
+					parsedSocket.Protocol = layers.LayerTypeTCP
 				case "udp":
-					socket.Protocol = layers.LayerTypeUDP
+					parsedSocket.Protocol = layers.LayerTypeUDP
 				case "icmpv4":
-					socket.Protocol = layers.LayerTypeICMPv4
+					parsedSocket.Protocol = layers.LayerTypeICMPv4
 				}
-				if strings.Contains(yamlSocket.RemoteIP, "/") {
-					_, socket.RemoteIP, err = net.ParseCIDR(yamlSocket.RemoteIP)
-					if err != nil {
-						pathField.WithField("error", err).Debug("failed to parse security policy")
-						return
+				if !strings.Contains(yamlSocket.RemoteIP, "/") {
+					var appendString string = "/32"
+					if strings.Contains(yamlSocket.RemoteIP, ":") {
+						appendString = "/128"
 					}
-				} else {
-					socket.RemoteIP = &net.IPNet{IP: net.ParseIP(yamlSocket.RemoteIP)}
+					yamlSocket.RemoteIP = strings.Join([]string{yamlSocket.RemoteIP, appendString}, "")
 				}
-				communication.Sockets = append(communication.Sockets, socket)
+				_, parsedSocket.RemoteIP, _ = net.ParseCIDR(yamlSocket.RemoteIP)
 			}
-			parsedPolicy.Communications = append(parsedPolicy.Communications, &communication)
 		}
-		parsedPolicies = append(parsedPolicies, &parsedPolicy)
 	}
 
 	pathField.WithField("parsed_policies", parsedPolicies).Debug("security policy parsed")
