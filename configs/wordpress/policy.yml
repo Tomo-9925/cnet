@@ -8,7 +8,7 @@ policies:
           - protocol: "tcp"
             local_port: 80
           - protocol: "tcp"
-            remote_ip: "192.168.3.2"
+            remote_ip: "192.168.3.2"  # mariadb
             remote_port: 3306
           - protocol: "tcp"
             remote_ip: "198.143.164.250"  # downloads.wordpress.org
@@ -23,6 +23,12 @@ policies:
           - path: "/usr/local/bin/php"
         sockets:
           - protocol: "tcp"
+            remote_ip: "192.168.3.2"
+            remote_port: 3306
+          - protocol: "tcp"
+            remote_ip: "198.143.164.250"
+            remote_port: 443
+          - protocol: "tcp"
             remote_ip: "198.143.164.251"
             remote_port: 443
           - protocol: "tcp"
@@ -35,5 +41,5 @@ policies:
           - path: "/usr/sbin/mariadbd"
         sockets:
           - protocol: "tcp"
-            remote_ip: "192.168.3.3"
+            remote_ip: "192.168.3.3"  # wordpress
             local_port: 3306
