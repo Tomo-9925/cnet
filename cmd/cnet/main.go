@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"os/signal"
+	"runtime"
+	"sync"
 	"syscall"
 
 	"github.com/AkihiroSuda/go-netfilter-queue"
@@ -30,12 +32,17 @@ func main() {
 	runNotifyAPI := runnotify.NewAPI(runCh, killCh, runErrCh)
 	go runNotifyAPI.Start()
 
+	waitGroup := &sync.WaitGroup{}
+	semaphore := make(chan int, runtime.NumCPU())
+
 	for {
 		select {
 		case s := <-sig:
+			waitGroup.Wait()
 			logrus.WithField("signal", s).Info("the signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
+			waitGroup.Wait()
 			//Include newly launched containers in the monitoring
 			containerFields := logrus.WithFields(logrus.Fields{
 				"container_id": cid,
@@ -59,6 +66,7 @@ func main() {
 			proc.SocketCache.Flush()
 			policy.PolicyCache.Flush()
 		case cid := <-killCh:
+			waitGroup.Wait()
 			//Removing finished containers from monitoring
 			container.RemoveContainerFromSlice(containers, cid)
 			logrus.WithFields(logrus.Fields{
@@ -69,41 +77,10 @@ func main() {
 			proc.SocketCache.Flush()
 			policy.PolicyCache.Flush()
 		case cid := <-runErrCh:
+			waitGroup.Wait()
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:
-			logrus.WithField("packet", p).Debug("the packet received")
-			var (
-				targetSocket          *proc.Socket
-				communicatedContainer *container.Container
-				communicatedProcess   *proc.Process
-			)
-			targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
-			if err != nil {
-				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("error", err).Warn("the packet with unspecified structure dropped")
-				continue
-			}
-			communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
-			if err != nil {
-				p.SetVerdict(netfilter.NF_DROP)
-				logrus.WithField("error", err).WithFields(logrus.Fields{
-					"target_socket":          targetSocket,
-					"communicated_container": communicatedContainer,
-				}).Warn("the packet with unidentified process dropped")
-				continue
-			}
-			communicationFields := logrus.WithFields(logrus.Fields{
-				"target_socket":          targetSocket,
-				"communicated_container": communicatedContainer,
-				"communicated_process":   communicatedProcess,
-			})
-			if !policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
-				p.SetVerdict(netfilter.NF_DROP)
-				communicationFields.Info("the undefined packet dropped")
-				continue
-			}
-			p.SetVerdict(netfilter.NF_ACCEPT)
-			communicationFields.Info("the defined packet accepted")
+			go packetHandler(&p, waitGroup, semaphore)
 		}
 	}
 }
