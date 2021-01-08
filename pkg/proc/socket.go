@@ -23,6 +23,10 @@ func (s *Socket)String() string {
 		s.Protocol, s.LocalIP, s.LocalPort, s.RemoteIP, s.RemotePort)
 }
 
+func (s *Socket)Hash() string {
+	return fmt.Sprintf("%X%X%X%X%X", s.Protocol, s.LocalIP, s.RemoteIP, s.LocalPort, s.RemotePort)
+}
+
 type direction bool
 
 const (
