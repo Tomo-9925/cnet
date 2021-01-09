@@ -29,13 +29,11 @@ func addContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore cha
 
 	err = policies.Reload()
 	if err != nil {
-		containerFields.WithField("error", err).Fatal("failed to parse security policy")
+		containerFields.WithField("error", err).Error("failed to parse security policy")
 	}
 	logrus.WithField("policies", policies).Info("the security policy data reloaded")
 
-	logrus.Infoln("clear cache")
-	proc.SocketCache.Flush()
-	policy.PolicyCache.Flush()
+	clearCache()
 }
 
 func removeContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
@@ -51,6 +49,11 @@ func removeContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore 
 		"container_id": cid,
 		"containers":   containers,
 	}).Info("the container inspection removed")
+
+	clearCache()
+}
+
+func clearCache() {
 	logrus.Infoln("clear cache")
 	proc.SocketCache.Flush()
 	policy.PolicyCache.Flush()
