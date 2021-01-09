@@ -56,10 +56,8 @@ func init() {
 		}
 		logrus.SetOutput(logFile)
 	}
-	logrus.DeferExitHandler(deinit)
-
-	// Configure logrus
 	logrus.SetLevel(logLevel)
+	logrus.DeferExitHandler(deinit)
 
 	containers, err = container.FetchDockerContainerInspections()
 	if err != nil {

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/network"
 )
@@ -22,6 +24,7 @@ func deinit() {
 	if !debug {
 		err = logFile.Close()
 		if err != nil {
+			logrus.SetOutput(os.Stderr)
 			logrus.WithField("error", err).Error("failed to close log file")
 		}
 	}
