@@ -36,6 +36,7 @@ func (c *Container)String() string {
 	return fmt.Sprintf("{ID:%s Name:%s}", c.ID, c.Name)
 }
 
+// Containers is the structure that have list of Container and mutex.
 type Containers struct {
 	List    []*Container
 	RWMutex sync.RWMutex
