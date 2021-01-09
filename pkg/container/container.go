@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 )
 
 // Container is information about container needed to analyze communications of container.
@@ -17,10 +18,7 @@ type Container struct {
 // Equal reports whether c and x are the same container.
 func (c *Container) Equal(x *Container) bool {
 	if c.ID != "" && x.ID != "" {
-		if strings.HasPrefix(c.ID, x.ID) || strings.HasPrefix(x.ID, c.ID) {
-			return true
-		}
-		return false
+		return strings.HasPrefix(c.ID, x.ID) || strings.HasPrefix(x.ID, c.ID)
 	} else if c.Name == "" || x.Name == "" {
 		return false
 	}
@@ -36,4 +34,13 @@ func (c *Container) Equal(x *Container) bool {
 
 func (c *Container)String() string {
 	return fmt.Sprintf("{ID:%s Name:%s}", c.ID, c.Name)
+}
+
+type Containers struct {
+	List    []*Container
+	RWMutex sync.RWMutex
+}
+
+func (c *Containers)String() string {
+	return fmt.Sprint(c.List)
 }

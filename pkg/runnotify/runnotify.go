@@ -27,7 +27,7 @@ func NewAPI(runCh chan string, killCh chan string, errCh chan error) *API {
 	argFields.Debug("trying to make runnotify api")
 
 	runNotifyAPI := API{Messages: nil, runCh: runCh, killCh: killCh, errCh: errCh}
-	runNotifyAPI.Messages, runNotifyAPI.Err = container.NewWatcher()
+	runNotifyAPI.Messages, runNotifyAPI.Err = container.NewDockerEventWatcher()
 
 	argFields.WithField("run_notify_api", runNotifyAPI).Debug("runnotify api made")
 	return &runNotifyAPI

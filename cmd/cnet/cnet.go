@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	debug bool = false
+	debug bool = true
 
 	// File path
 	logFilePath string = "./cnet.log"
@@ -29,7 +29,7 @@ const (
 var (
 	err        error
 	logFile    *os.File
-	containers []*container.Container
+	containers *container.Containers
 	policies   policy.Policies
 	logLevel   logrus.Level
 )

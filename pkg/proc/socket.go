@@ -39,7 +39,7 @@ type packetIPAddr struct {
 }
 
 // CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
-func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*container.Container) (socket *Socket, communicatedContainer *container.Container, err error) {
+func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers *container.Containers) (socket *Socket, communicatedContainer *container.Container, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"target_packet": packet,
 		"containers": containers,
@@ -69,8 +69,9 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 
 	// Check container and direction, local IP, remote IP
 	var packetDirection direction
+	containers.RWMutex.RLock()
 	setIPOfSocket:
-	for _, container := range containers {
+	for _, container := range containers.List {
 		for _, ipAddr := range container.IPAddresses {
 			if ip.src.Equal(ipAddr) {
 				packetDirection = out
@@ -85,6 +86,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 			}
 		}
 	}
+	containers.RWMutex.RUnlock()
 	if communicatedContainer == nil {
 		err = errors.New("communicated container not found")
 		argFields.WithField("error", err).Debug("failed to check socket and communicated container")
@@ -114,7 +116,7 @@ func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers []*
 	argFields.WithFields(logrus.Fields{
 		"target_socket": socket,
 		"communicated_container": communicatedContainer,
-		}).Debug("the ppid retrieved")
+		}).Debug("socket and communicated container checked")
 	return
 }
 
@@ -156,13 +158,3 @@ func CheckIdentifierOfICMP(socket *Socket, packet *gopacket.Packet) (identifier 
 	}
 	return
 }
-
-// IsSupportProtocol reports whether the protocol is supported.
-// func (s *Socket) IsSupportProtocol() bool {
-// 	for _, protocol := range supportedProtocol {
-// 		if s.Protocol == protocol {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }

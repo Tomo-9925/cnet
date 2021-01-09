@@ -45,7 +45,7 @@ func init() {
 }
 
 // FetchDockerContainerInspections return the information slice of Docker container.
-func FetchDockerContainerInspections() (containers []*Container, err error) {
+func FetchDockerContainerInspections() (containers *Containers, err error) {
 	logrus.Debugln("trying to fetch docker container inspections")
 
 	var dockerContainerList []types.Container
@@ -55,14 +55,15 @@ func FetchDockerContainerInspections() (containers []*Container, err error) {
 		return
 	}
 
-	for _, dockerContainer := range dockerContainerList {
+	containers = &Containers{List: make([]*Container, len(dockerContainerList))}
+	for i, dockerContainer := range dockerContainerList {
 		var container *Container
 		container, err = FetchDockerContainerInspection(dockerContainer.ID)
 		if err != nil {
 			logrus.WithField("error", err).Debug("container inspections not fetched")
 			return
 		}
-		containers = append(containers, container)
+		containers.List[i] = container
 	}
 
 	logrus.WithField("containers", containers).Debug("container inspections fetched")
@@ -90,23 +91,45 @@ func FetchDockerContainerInspection(cid string) (container *Container, err error
 	return
 }
 
-// RemoveContainerFromSlice removes container information from slice.
-func RemoveContainerFromSlice(containers []*Container, cid string) (result []*Container) {
-	for _, container := range containers {
-		if container.ID != cid {
-			result = append(result, container)
-		}
+// AddDockerContainerToList add container information to Containers List
+func AddDockerContainerToList(containers *Containers, cid string) (err error) {
+	var container *Container
+	container, err = FetchDockerContainerInspection(cid)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"containers": containers,
+			"added_container_id": cid,
+		}).Debug("failed to add container inspection")
+		return
 	}
-
+	containers.RWMutex.Lock()
+	containers.List = append(containers.List, container)
+	containers.RWMutex.Unlock()
 	logrus.WithFields(logrus.Fields{
-		"containers": result,
-		"removed_container_id": cid,
-	}).Debug("container inspection removed")
+		"containers": containers,
+		"added_container_id": cid,
+	}).Debug("container inspection added")
 	return
 }
 
-// NewWatcher starts monitoring docker events.
-func NewWatcher() (msg <-chan events.Message, err <-chan error) {
+// RemoveDockerContainerFromList removes container information from Containers List.
+func RemoveDockerContainerFromList(containers *Containers, cid string) {
+	for i, container := range containers.List {
+		if container.ID == cid {
+			containers.RWMutex.Lock()
+			containers.List = append(containers.List[:i], containers.List[i+1:]...)
+			containers.RWMutex.Unlock()
+			logrus.WithFields(logrus.Fields{
+				"containers": containers,
+				"removed_container_id": cid,
+			}).Debug("container inspection removed")
+			return
+		}
+	}
+}
+
+// NewDockerEventWatcher starts monitoring docker events.
+func NewDockerEventWatcher() (msg <-chan events.Message, err <-chan error) {
 	logrus.Debugln("trying to fetch docker container inspection")
 
 	filter := filters.NewArgs()

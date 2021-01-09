@@ -113,7 +113,7 @@ func TestIdentifyTCPCommunication(t *testing.T) {
 	p := <-packets
 
 	// Get Socket Information
-	socket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, []*cnetContainer.Container{startedContainer})
+	socket, _, err := proc.CheckSocketAndCommunicatedContainer(&p.Packet, &cnetContainer.Containers{List: []*cnetContainer.Container{startedContainer}})
 	if err != nil {
 		t.Fatal(err)
 	}
