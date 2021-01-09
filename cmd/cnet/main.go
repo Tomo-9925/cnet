@@ -39,9 +39,9 @@ func main() {
 			logrus.WithField("signal", s).Info("the signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
-			go addContainer(cid, waitGroup, semaphore)
+			go addContainerInspection(cid, waitGroup, semaphore)
 		case cid := <-killCh:
-			go removeContainer(cid, waitGroup, semaphore)
+			go removeContainerInspection(cid, waitGroup, semaphore)
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:

@@ -9,7 +9,7 @@ import (
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-func addContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
+func addContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -17,7 +17,6 @@ func addContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
 		waitGroup.Done()
 	}()
 
-	//Include newly launched containers in the monitoring
 	containerFields := logrus.WithFields(logrus.Fields{
 		"container_id": cid,
 		"containers":   containers,
@@ -39,7 +38,7 @@ func addContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
 	policy.PolicyCache.Flush()
 }
 
-func removeContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
+func removeContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
