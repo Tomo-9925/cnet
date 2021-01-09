@@ -30,6 +30,6 @@ var (
 	err        error
 	logFile    *os.File
 	containers *container.Containers
-	policies   policy.Policies
+	policies   *policy.Policies
 	logLevel   logrus.Level
 )

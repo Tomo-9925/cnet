@@ -67,7 +67,7 @@ func init() {
 	}
 	logrus.WithField("containers", containers).Info("container information fetched")
 
-	policies, err = policy.ParseSecurityPolicy(policyPath)
+	policies, err = policy.Read(policyPath)
 	if err != nil {
 		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}

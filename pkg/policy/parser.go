@@ -33,33 +33,32 @@ type yamlPolicies struct {
 	}
 }
 
-// ParseSecurityPolicy return the information slice of policy.
-func ParseSecurityPolicy(path string) (parsedPolicies Policies, err error) {
+func parseYAMLPolicyList(path string) (parsedPolicyList []*Policy, err error) {
 	pathField := logrus.WithField("path", path)
-	pathField.Debug("trying to parse security policy")
+	pathField.Debug("trying to parse yaml policy list")
 
 	var rawPolicyData []byte
 	rawPolicyData, err = ioutil.ReadFile(path)
 	if err != nil {
-		pathField.WithField("error", err).Debug("failed to parse security policy")
+		pathField.WithField("error", err).Debug("failed to parse yaml policy list")
 		return
 	}
 
 	var yamlData yamlPolicies
 	err = yaml.Unmarshal(rawPolicyData, &yamlData)
 	if err != nil {
-		pathField.WithField("error", err).Debug("failed to parse security policy")
+		pathField.WithField("error", err).Debug("failed to parse yaml policy list")
 		return
 	}
 
 	// Make Policies
-	parsedPolicies = make(Policies, len(yamlData.Policies))
+	parsedPolicyList = make([]*Policy, len(yamlData.Policies))
 	for i, yamlPolicy := range yamlData.Policies {
 		parsedPolicy := &Policy{Container: &container.Container{
 			Name: yamlPolicy.Container.Name,
 			ID: yamlPolicy.Container.ID,
 		}}
-		parsedPolicies[i] = parsedPolicy
+		parsedPolicyList[i] = parsedPolicy
 		parsedPolicy.Communications = make([]*Communication, len(yamlPolicy.Communications))
 		for j, yamlCommunication := range yamlPolicy.Communications {
 			parsedCommunication := &Communication{}
@@ -98,7 +97,22 @@ func ParseSecurityPolicy(path string) (parsedPolicies Policies, err error) {
 			}
 		}
 	}
+	return
+}
 
-	pathField.WithField("parsed_policies", parsedPolicies).Debug("security policy parsed")
-	return parsedPolicies, err
+// Read returns the Policies of the specified YAML file path.
+func Read(path string) (policies *Policies, err error) {
+	pathField := logrus.WithField("path", path)
+	pathField.Debug("trying to read the policy")
+
+	var parsedPolicyList []*Policy
+	parsedPolicyList, err = parseYAMLPolicyList(path)
+	if err != nil {
+		pathField.WithField("error", err).Debug("failed to read the policy")
+		return
+	}
+	policies = &Policies{Path: path, List: parsedPolicyList}
+
+	pathField.WithField("policies", policies).Debug("the policy read")
+	return
 }

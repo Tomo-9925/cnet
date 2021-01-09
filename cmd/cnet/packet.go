@@ -43,11 +43,11 @@ func packetHandler(p *netfilter.NFPacket, waitGroup *sync.WaitGroup, semaphore c
 		"communicated_container": communicatedContainer,
 		"communicated_process":   communicatedProcess,
 	})
-	if !policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
-		p.SetVerdict(netfilter.NF_DROP)
-		communicationFields.Info("the undefined packet dropped")
+	if policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
+		p.SetVerdict(netfilter.NF_ACCEPT)
+		communicationFields.Info("the defined packet accepted")
 		return
 	}
-	p.SetVerdict(netfilter.NF_ACCEPT)
-	communicationFields.Info("the defined packet accepted")
+	p.SetVerdict(netfilter.NF_DROP)
+	communicationFields.Info("the undefined packet dropped")
 }

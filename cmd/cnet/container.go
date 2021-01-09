@@ -28,8 +28,7 @@ func addContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
 	}
 	containerFields.WithField("containers", containers).Info("the container inspection added")
 
-	// Reload security policy data
-	policies, err = policy.ParseSecurityPolicy(policyPath)
+	err = policies.Reload()
 	if err != nil {
 		containerFields.WithField("error", err).Fatal("failed to parse security policy")
 	}
@@ -48,7 +47,6 @@ func removeContainer(cid string, waitGroup *sync.WaitGroup, semaphore chan int) 
 		waitGroup.Done()
 	}()
 
-	//Removing finished containers from monitoring
 	container.RemoveDockerContainerFromList(containers, cid)
 	logrus.WithFields(logrus.Fields{
 		"container_id": cid,
