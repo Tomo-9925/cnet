@@ -6,11 +6,12 @@ import (
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/policy"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-func PacketHandler(p *netfilter.NFPacket, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
+func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -25,7 +26,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *container.Containers, poli
 		communicatedProcess   *proc.Process
 		err                   error
 	)
-	targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
+	targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedDockerContainer(&p.Packet, containers)
 	if err != nil {
 		p.SetVerdict(netfilter.NF_DROP)
 		logrus.WithField("error", err).Warn("the packet with unspecified structure dropped")

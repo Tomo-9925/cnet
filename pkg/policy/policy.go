@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
@@ -107,7 +108,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	}
 
 	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 {
-		dockerdPath, err := proc.RetrieveProcessPath(container.DockerdPID)
+		dockerdPath, err := proc.RetrieveProcessPath(docker.PID)
 		if err == nil && communicatedProcess.Path == dockerdPath {
 			relevantFields.Debug("the dns request is assumed to be defined")
 			return true

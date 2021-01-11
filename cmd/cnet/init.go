@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/network"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
@@ -59,7 +59,7 @@ func init() {
 	logrus.SetLevel(logLevel)
 	logrus.DeferExitHandler(deinit)
 
-	containers, err = container.FetchDockerContainerInspections()
+	containers, err = docker.FetchContainerInspections()
 	if err != nil {
 		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}

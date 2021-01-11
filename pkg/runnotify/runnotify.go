@@ -5,7 +5,7 @@ import (
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/sirupsen/logrus"
-	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 )
 
 // API is the collection of channels that receive container events from Docker Engine API
@@ -27,7 +27,7 @@ func NewAPI(runCh chan string, killCh chan string, errCh chan error) *API {
 	argFields.Debug("trying to make runnotify api")
 
 	runNotifyAPI := API{Messages: nil, runCh: runCh, killCh: killCh, errCh: errCh}
-	runNotifyAPI.Messages, runNotifyAPI.Err = container.NewDockerEventWatcher()
+	runNotifyAPI.Messages, runNotifyAPI.Err = docker.NewEventWatcher()
 
 	argFields.WithField("run_notify_api", runNotifyAPI).Debug("runnotify api made")
 	return &runNotifyAPI

@@ -4,11 +4,11 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
 
-func AddDockerContainerInspection(cid string, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
+func AddDockerContainerInspection(cid string, containers *docker.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -20,7 +20,7 @@ func AddDockerContainerInspection(cid string, containers *container.Containers, 
 		"container_id": cid,
 		"containers":   containers,
 	})
-	err := container.AddDockerContainerToList(containers, cid)
+	err := containers.AddContainer(cid)
 	if err != nil {
 		containerFields.WithField("error", err).Error("failed to add the container inspection")
 	}
@@ -35,7 +35,7 @@ func AddDockerContainerInspection(cid string, containers *container.Containers, 
 	clearCache()
 }
 
-func RemoveDockerContainerInspection(cid string, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
+func RemoveDockerContainerInspection(cid string, containers *docker.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -43,7 +43,7 @@ func RemoveDockerContainerInspection(cid string, containers *container.Container
 		waitGroup.Done()
 	}()
 
-	container.RemoveDockerContainerFromList(containers, cid)
+	containers.RemoveContainer(cid)
 	logrus.WithFields(logrus.Fields{
 		"container_id": cid,
 		"containers":   containers,

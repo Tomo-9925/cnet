@@ -9,6 +9,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 )
 
 // Socket is information needed to control network.
@@ -38,8 +39,8 @@ type packetIPAddr struct {
 	src, dst net.IP
 }
 
-// CheckSocketAndCommunicatedContainer returns socket and communicated container from packet and containers.
-func CheckSocketAndCommunicatedContainer(packet *gopacket.Packet, containers *container.Containers) (socket *Socket, communicatedContainer *container.Container, err error) {
+// CheckSocketAndCommunicatedDockerContainer returns socket and communicated docker container from packet and containers.
+func CheckSocketAndCommunicatedDockerContainer(packet *gopacket.Packet, containers *docker.Containers) (socket *Socket, communicatedContainer *container.Container, err error) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"target_packet": packet,
 		"containers": containers,

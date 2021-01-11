@@ -5,7 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
 
@@ -29,7 +29,7 @@ const (
 var (
 	err        error
 	logFile    *os.File
-	containers *container.Containers
+	containers *docker.Containers
 	policies   *policy.Policies
 	logLevel   logrus.Level
 )
