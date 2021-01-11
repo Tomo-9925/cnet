@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	debug bool = true
+	debug bool = false
 
 	// File path
 	logFilePath string = "./cnet.log"
@@ -23,7 +23,7 @@ const (
 	queueNum  uint16 = 2
 
 	// NFQueue settings
-	maxPacketsInQueue uint32 = 1000
+	maxPacketsInQueue uint32 = 10000
 )
 
 var (

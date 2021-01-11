@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"sync"
@@ -6,10 +6,11 @@ import (
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/policy"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-func packetHandler(p *netfilter.NFPacket, waitGroup *sync.WaitGroup, semaphore chan int) {
+func PacketHandler(p *netfilter.NFPacket, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -22,6 +23,7 @@ func packetHandler(p *netfilter.NFPacket, waitGroup *sync.WaitGroup, semaphore c
 		targetSocket          *proc.Socket
 		communicatedContainer *container.Container
 		communicatedProcess   *proc.Process
+		err                   error
 	)
 	targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedContainer(&p.Packet, containers)
 	if err != nil {

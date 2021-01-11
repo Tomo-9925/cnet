@@ -9,6 +9,7 @@ import (
 
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
+	"github.com/tomo-9925/cnet/pkg/handler"
 	"github.com/tomo-9925/cnet/pkg/runnotify"
 )
 
@@ -39,13 +40,13 @@ func main() {
 			logrus.WithField("signal", s).Info("the signal received")
 			logrus.Exit(0)
 		case cid := <-runCh:
-			go addContainerInspection(cid, waitGroup, semaphore)
+			go handler.AddDockerContainerInspection(cid, containers, policies, waitGroup, semaphore)
 		case cid := <-killCh:
-			go removeContainerInspection(cid, waitGroup, semaphore)
+			go handler.RemoveDockerContainerInspection(cid, containers, policies, waitGroup, semaphore)
 		case cid := <-runErrCh:
 			logrus.WithField("container_id", cid).Info("an error occurred when starting the container")
 		case p := <-packets:
-			go packetHandler(&p, waitGroup, semaphore)
+			go handler.PacketHandler(&p, containers, policies, waitGroup, semaphore)
 		}
 	}
 }

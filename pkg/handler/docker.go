@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"sync"
@@ -6,10 +6,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
 	"github.com/tomo-9925/cnet/pkg/policy"
-	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-func addContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
+func AddDockerContainerInspection(cid string, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -36,7 +35,7 @@ func addContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore cha
 	clearCache()
 }
 
-func removeContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore chan int) {
+func RemoveDockerContainerInspection(cid string, containers *container.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
 	waitGroup.Add(1)
 	semaphore <- 1
 	defer func(){
@@ -51,10 +50,4 @@ func removeContainerInspection(cid string, waitGroup *sync.WaitGroup, semaphore 
 	}).Info("the container inspection removed")
 
 	clearCache()
-}
-
-func clearCache() {
-	logrus.Infoln("clear cache")
-	proc.SocketCache.Flush()
-	policy.PolicyCache.Flush()
 }
