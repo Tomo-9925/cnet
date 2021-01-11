@@ -39,7 +39,7 @@ func (c *Container)String() string {
 // Containers is the structure that have list of Container and mutex.
 type Containers struct {
 	List    []*Container
-	RWMutex *sync.RWMutex
+	RWMutex sync.RWMutex
 }
 
 func (c *Containers)String() string {

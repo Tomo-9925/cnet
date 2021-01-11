@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"net"
-	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
@@ -44,10 +43,7 @@ func FetchContainerInspections() (containers *Containers, err error) {
 		return
 	}
 
-	containers = &Containers{
-		List: make([]*container.Container, len(dockerContainerList)),
-		RWMutex: &sync.RWMutex{},
-	}
+	containers = &Containers{List: make([]*container.Container, len(dockerContainerList))}
 	for i, dockerContainer := range dockerContainerList {
 		var container *container.Container
 		container, err = fetchContainerInspection(dockerContainer.ID)
