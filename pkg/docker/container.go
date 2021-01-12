@@ -32,8 +32,8 @@ func fetchContainerInspection(cid string) (container *basedContainer.Container, 
 	return
 }
 
-// FetchContainerInspections return the information slice of Docker container.
-func FetchContainerInspections() (containers *Containers, err error) {
+// InitializeContainers return the information slice of Docker container.
+func InitializeContainers() (containers *Containers, err error) {
 	logrus.Debugln("trying to fetch docker container inspections")
 
 	var dockerContainerList []types.Container

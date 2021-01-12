@@ -59,7 +59,7 @@ func init() {
 	logrus.SetLevel(logLevel)
 	logrus.DeferExitHandler(deinit)
 
-	containers, err = docker.FetchContainerInspections()
+	containers, err = docker.InitializeContainers()
 	if err != nil {
 		logrus.WithField("error", err).Fatal("failed to initialize cnet")
 	}
