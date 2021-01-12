@@ -85,6 +85,8 @@ func parseYAMLPolicyList(path string) (parsedPolicyList []*Policy, err error) {
 					parsedSocket.Protocol = layers.LayerTypeUDP
 				case "icmpv4":
 					parsedSocket.Protocol = layers.LayerTypeICMPv4
+				case "icmpv6":
+					parsedSocket.Protocol = layers.LayerTypeICMPv6
 				}
 				if !strings.Contains(yamlSocket.RemoteIP, "/") {
 					var appendString string = "/32"
