@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/policy"
+	"github.com/tomo-9925/cnet/pkg/utility"
 )
 
 func AddDockerContainerInspection(cid string, containers *docker.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
@@ -32,7 +33,7 @@ func AddDockerContainerInspection(cid string, containers *docker.Containers, pol
 	}
 	logrus.WithField("policies", policies).Info("the security policy data reloaded")
 
-	clearCache()
+	utility.ClearCache()
 }
 
 func RemoveDockerContainerInspection(cid string, containers *docker.Containers, policies *policy.Policies, waitGroup *sync.WaitGroup, semaphore chan int) {
@@ -49,5 +50,5 @@ func RemoveDockerContainerInspection(cid string, containers *docker.Containers, 
 		"containers":   containers,
 	}).Info("the container inspection removed")
 
-	clearCache()
+	utility.ClearCache()
 }

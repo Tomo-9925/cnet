@@ -1,4 +1,4 @@
-package handler
+package utility
 
 import (
 	"github.com/sirupsen/logrus"
@@ -6,7 +6,8 @@ import (
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
-func clearCache() {
+// ClearCache clears cache of policy and proc package.
+func ClearCache() {
 	logrus.Infoln("clear cache")
 	proc.SocketCache.Flush()
 	policy.PolicyCache.Flush()
