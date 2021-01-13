@@ -3,11 +3,13 @@ package policy
 import (
 	"fmt"
 	"net"
+	"sync"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/proc"
 )
 
@@ -56,13 +58,43 @@ func (s *Socket) IsMatched(x *proc.Socket) bool {
 	return true
 }
 
-// Policies is slice of Policy structure.
-type Policies []*Policy
+// Policies is the structure that have list of Policy and mutex
+type Policies struct {
+	Path    string
+	List    []*Policy
+	RWMutex sync.RWMutex
+}
+
+func (p *Policies)String() string {
+	return fmt.Sprint(p.List)
+}
+
+// Reload retrieve the policy list of the specified YAML file path again.
+func (p *Policies)Reload() (err error) {
+	pathField := logrus.WithFields(logrus.Fields{
+		"policies": p.List,
+		"path": p.Path,
+	})
+	pathField.Debug("trying to reload the policy")
+
+	var parsedPolicyList []*Policy
+	parsedPolicyList, err = parseYAMLPolicyList(p.Path)
+	if err != nil {
+		pathField.WithField("error", err).Debug("failed to reload the policy")
+		return
+	}
+	p.RWMutex.Lock()
+	p.List = parsedPolicyList
+	p.RWMutex.Unlock()
+
+	pathField.Debug("the policy reloaded")
+	return
+}
 
 // IsDefined reports whether the policy is defined.
 func (p *Policies) IsDefined(communicatedContainer *container.Container, communicatedProcess *proc.Process, targetSocket *proc.Socket) (judgement bool) { ////nolint:gocognit
 	relevantFields := logrus.WithFields(logrus.Fields{
-		"policies": *p,
+		"policies": p,
 		"communicated_container": communicatedContainer,
 		"communicated_process": communicatedProcess,
 		"target_socket": targetSocket,
@@ -76,7 +108,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	}
 
 	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 {
-		dockerdPath, err := proc.RetrieveProcessPath(container.DockerdPID)
+		dockerdPath, err := proc.RetrieveProcessPath(docker.PID)
 		if err == nil && communicatedProcess.Path == dockerdPath {
 			relevantFields.Debug("the dns request is assumed to be defined")
 			return true
@@ -84,8 +116,9 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	}
 
 	// HACK: So many indents that it's hard to understand. The structure of Policies may need to be rethought.
+	p.RWMutex.RLock()
 	comparePolicy:
-	for _, policy := range *p {
+	for _, policy := range p.List {
 		if !policy.Container.Equal(communicatedContainer) {
 			continue
 		}
@@ -116,6 +149,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 			}
 		}
 	}
+	p.RWMutex.RUnlock()
 
 	PolicyCache.Set(targetSocket.Hash(), judgement,0)
 	relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")

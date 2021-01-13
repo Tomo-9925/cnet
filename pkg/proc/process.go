@@ -16,6 +16,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/sirupsen/logrus"
 	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 )
 
 // Process is information about process needed to analyze communications of container.
@@ -266,8 +267,8 @@ func SearchProcessOfContainerFromInode(communicatedContainer *container.Containe
 	})
 	argFields.Debug("trying to search process of container from inode")
 
-	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 && SocketInodeExists(container.DockerdPID, inode) {
-		process, err = MakeProcessStruct(container.DockerdPID)
+	if targetSocket.Protocol == layers.LayerTypeUDP && targetSocket.RemotePort == 53 && SocketInodeExists(docker.PID, inode) {
+		process, err = MakeProcessStruct(docker.PID)
 		if err != nil {
 			argFields.WithField("error", err).Debug("failed to search process of container from inode")
 			return

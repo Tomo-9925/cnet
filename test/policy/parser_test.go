@@ -25,20 +25,22 @@ var (
 	testSocketRemoteIP net.IP = net.ParseIP("158.217.2.147")
 	testSocketRemotePort uint16 = 80
 
-  expectedPolicies policy.Policies = policy.Policies{{
-    Container: &container.Container{
-      Name: testContainerName,
-    },
-    Communications: []*policy.Communication{{
-      Processes: []*proc.Process{{
-        Executable: testProcessExecutable,
-        Path: testProcessPath}},
-      Sockets: []*policy.Socket{{
-        Protocol: testSocketProtocol,
-        RemoteIP: &net.IPNet{IP: testSocketRemoteIP, Mask: net.CIDRMask(32, 32)},
-        RemotePort: testSocketRemotePort}},
-    }},
-  }}
+  expectedPolicies policy.Policies = policy.Policies{
+		List: []*policy.Policy{{
+			Container: &container.Container{
+				Name: testContainerName,
+			},
+			Communications: []*policy.Communication{{
+				Processes: []*proc.Process{{
+					Executable: testProcessExecutable,
+					Path: testProcessPath}},
+				Sockets: []*policy.Socket{{
+					Protocol: testSocketProtocol,
+					RemoteIP: &net.IPNet{IP: testSocketRemoteIP, Mask: net.CIDRMask(32, 32)},
+					RemotePort: testSocketRemotePort}},
+			}},
+		}},
+	}
 )
 
 func TestParseSecurityPolicy(t *testing.T) {
@@ -71,11 +73,11 @@ func TestParseSecurityPolicy(t *testing.T) {
 	}
 
 	// Parse policies
-	parsedPolicies, err := policy.ParseSecurityPolicy(tmpPolicyFile.Name())
+	parsedPolicies, err := policy.Read(tmpPolicyFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if diff := cmp.Diff(parsedPolicies, expectedPolicies); diff != "" {
+	if diff := cmp.Diff(parsedPolicies.List, expectedPolicies.List); diff != "" {
 		t.Error("policies differs:", diff)
 	}
 }

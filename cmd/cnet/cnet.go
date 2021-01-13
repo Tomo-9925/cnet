@@ -5,7 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/tomo-9925/cnet/pkg/container"
+	"github.com/tomo-9925/cnet/pkg/docker"
 	"github.com/tomo-9925/cnet/pkg/policy"
 )
 
@@ -23,13 +23,13 @@ const (
 	queueNum  uint16 = 2
 
 	// NFQueue settings
-	maxPacketsInQueue uint32 = 1000
+	maxPacketsInQueue uint32 = 10000
 )
 
 var (
 	err        error
 	logFile    *os.File
-	containers []*container.Container
-	policies   policy.Policies
+	containers *docker.Containers
+	policies   *policy.Policies
 	logLevel   logrus.Level
 )
