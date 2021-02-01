@@ -62,7 +62,8 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		}
 		process, err = SearchProcessOfContainerFromInode(container, socket, inode)
 		if err != nil {
-			argFields.WithField("error", err).Debug("failed to indentify process of container")
+			argFields.WithField("warn", err).Debug("could not identify the process by tcp or udp")
+			break
 		}
 		argFields.WithField("identified_process", process).Debug("the process identified")
 		SocketCache.Set(socket.Hash(), process, 0)
