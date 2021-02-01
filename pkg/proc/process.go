@@ -106,7 +106,6 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			if NSpidExists(suspiciousProcess.ID, identifierStr) {
 				process = &suspiciousProcess
 				argFields.WithField("identified_process", process).Debug("the process identified")
-				SocketCache.Set(socket.Hash(), process, 0)
 				return
 			}
 		}
