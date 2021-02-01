@@ -90,7 +90,6 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		for suspiciousProcess := range suspiciousProcesses {
 			process = &suspiciousProcess
 			argFields.WithField("identified_process", process).Debug("the process identified")
-			SocketCache.Set(socket.Hash(), process, 0)
 			return
 		}
 	}
