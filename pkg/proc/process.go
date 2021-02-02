@@ -28,6 +28,9 @@ type Process struct {
 func (p *Process)String() string {
 	return fmt.Sprintf("{ID:%d Executable:%s Path:%s}", p.ID, p.Executable, p.Path)
 }
+func (p *Process)Hash() string{
+	return fmt.Sprintf("%X",p.ID)
+}
 
 // Equal reports whether c and x are the same process.
 func (p *Process)Equal(x *Process) bool {
