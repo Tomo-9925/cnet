@@ -4,11 +4,10 @@ policies:
     communications:
       - processes:
           - path: "/usr/sbin/apache2"
+          - path: "/usr/local/bin/php"
         sockets:
           - protocol: "tcp"
-            local_port: 80
-          - protocol: "tcp"
-            remote_ip: "192.168.3.2"  # mariadb
+            remote_ip: "192.168.3.2"      # mariadb container
             remote_port: 3306
           - protocol: "tcp"
             remote_ip: "198.143.164.250"  # downloads.wordpress.org
@@ -20,20 +19,10 @@ policies:
             remote_ip: "198.143.164.252"  # wordpress.org
             remort_port: 443
       - processes:
-          - path: "/usr/local/bin/php"
+          - path: "/usr/sbin/apache2"
         sockets:
           - protocol: "tcp"
-            remote_ip: "192.168.3.2"
-            remote_port: 3306
-          - protocol: "tcp"
-            remote_ip: "198.143.164.250"
-            remote_port: 443
-          - protocol: "tcp"
-            remote_ip: "198.143.164.251"
-            remote_port: 443
-          - protocol: "tcp"
-            remote_ip: "198.143.164.252"
-            remort_port: 443
+            local_port: 80
   - container:
       name: "cnet_db"
     communications:
@@ -41,5 +30,5 @@ policies:
           - path: "/usr/sbin/mariadbd"
         sockets:
           - protocol: "tcp"
-            remote_ip: "192.168.3.3"  # wordpress
+            remote_ip: "192.168.3.3"  # wordpress container
             local_port: 3306
