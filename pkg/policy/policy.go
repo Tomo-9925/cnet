@@ -101,7 +101,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	})
 	relevantFields.Debug("checking whether define the communication in this policies")
 
-	if cacheRawData, exist := PolicyCache.Get(targetSocket.Hash()); exist {
+	if cacheRawData, exist := PolicyCache.Get(GenerateHash(communicatedContainer,communicatedProcess,targetSocket)); exist {
 		judgement = cacheRawData.(bool)
 		relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
 		return
@@ -151,7 +151,7 @@ func (p *Policies) IsDefined(communicatedContainer *container.Container, communi
 	}
 	p.RWMutex.RUnlock()
 
-	PolicyCache.Set(targetSocket.Hash(), judgement,0)
+	PolicyCache.Set(GenerateHash(communicatedContainer,communicatedProcess,targetSocket), judgement,0)
 	relevantFields.WithField("judgement", judgement).Debug("checked whether define the communication in this policies")
 	return
 }
