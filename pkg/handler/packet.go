@@ -22,6 +22,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 
 	logrus.WithField("packet", *p).Debug("the packet received")
 	var (
+		existCache            bool
 		timeReceivedPacket    time.Time = time.Now()
 		targetSocket          *proc.Socket
 		communicatedContainer *container.Container
@@ -37,6 +38,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 			}).Warn("the packet with unspecified structure dropped")
 		return
 	}
+	_, existCache = proc.SocketCache.Get(targetSocket.Hash())
 	communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
 	if err != nil {
 		p.SetVerdict(netfilter.NF_DROP)
@@ -48,6 +50,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 		return
 	}
 	communicationFields := logrus.WithFields(logrus.Fields{
+		"hasUsedCache":           existCache,
 		"target_socket":          targetSocket,
 		"communicated_container": communicatedContainer,
 		"communicated_process":   communicatedProcess,
