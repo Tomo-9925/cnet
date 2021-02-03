@@ -50,7 +50,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 		return
 	}
 	communicationFields := logrus.WithFields(logrus.Fields{
-		"hasUsedCache":           existCache,
+		"has_used_cache":         existCache,
 		"target_socket":          targetSocket,
 		"communicated_container": communicatedContainer,
 		"communicated_process":   communicatedProcess,
