@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-
 var (
 	// PID is docker daemon pid
 	PID int
