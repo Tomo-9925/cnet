@@ -2,6 +2,7 @@ package handler
 
 import (
 	"sync"
+	"time"
 
 	"github.com/AkihiroSuda/go-netfilter-queue"
 	"github.com/sirupsen/logrus"
@@ -21,6 +22,7 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 
 	logrus.WithField("packet", *p).Debug("the packet received")
 	var (
+		timeReceivedPacket    time.Time = time.Now()
 		targetSocket          *proc.Socket
 		communicatedContainer *container.Container
 		communicatedProcess   *proc.Process
@@ -29,15 +31,19 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 	targetSocket, communicatedContainer, err = proc.CheckSocketAndCommunicatedDockerContainer(&p.Packet, containers)
 	if err != nil {
 		p.SetVerdict(netfilter.NF_DROP)
-		logrus.WithField("error", err).Warn("the packet with unspecified structure dropped")
+		logrus.WithFields(logrus.Fields{
+			"error": err,
+			"processing_time": time.Since(timeReceivedPacket),
+			}).Warn("the packet with unspecified structure dropped")
 		return
 	}
 	communicatedProcess, err = proc.IdentifyProcessOfContainer(targetSocket, communicatedContainer, &p.Packet)
 	if err != nil {
 		p.SetVerdict(netfilter.NF_DROP)
 		logrus.WithField("error", err).WithFields(logrus.Fields{
-			"target_socket":          targetSocket,
 			"communicated_container": communicatedContainer,
+			"processing_time": time.Since(timeReceivedPacket),
+			"target_socket":          targetSocket,
 		}).Warn("the packet with unidentified process dropped")
 		return
 	}
@@ -48,9 +54,9 @@ func PacketHandler(p *netfilter.NFPacket, containers *docker.Containers, policie
 	})
 	if policies.IsDefined(communicatedContainer, communicatedProcess, targetSocket) {
 		p.SetVerdict(netfilter.NF_ACCEPT)
-		communicationFields.Info("the defined packet accepted")
+		communicationFields.WithField("processing_time", time.Since(timeReceivedPacket)).Info("the defined packet accepted")
 		return
 	}
 	p.SetVerdict(netfilter.NF_DROP)
-	communicationFields.Info("the undefined packet dropped")
+	communicationFields.WithField("processing_time", time.Since(timeReceivedPacket)).Info("the undefined packet dropped")
 }
