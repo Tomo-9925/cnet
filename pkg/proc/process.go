@@ -28,6 +28,9 @@ type Process struct {
 func (p *Process)String() string {
 	return fmt.Sprintf("{ID:%d Executable:%s Path:%s}", p.ID, p.Executable, p.Path)
 }
+func (p *Process)Hash() string{
+	return fmt.Sprintf("%X",p.ID)
+}
 
 // Equal reports whether c and x are the same process.
 func (p *Process)Equal(x *Process) bool {
@@ -62,7 +65,8 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		}
 		process, err = SearchProcessOfContainerFromInode(container, socket, inode)
 		if err != nil {
-			argFields.WithField("error", err).Debug("failed to indentify process of container")
+			argFields.WithField("warn", err).Debug("could not identify the process by tcp or udp")
+			break
 		}
 		argFields.WithField("identified_process", process).Debug("the process identified")
 		SocketCache.Set(socket.Hash(), process, 0)
@@ -90,7 +94,6 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		for suspiciousProcess := range suspiciousProcesses {
 			process = &suspiciousProcess
 			argFields.WithField("identified_process", process).Debug("the process identified")
-			SocketCache.Set(socket.Hash(), process, 0)
 			return
 		}
 	}
@@ -107,7 +110,6 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			if NSpidExists(suspiciousProcess.ID, identifierStr) {
 				process = &suspiciousProcess
 				argFields.WithField("identified_process", process).Debug("the process identified")
-				SocketCache.Set(socket.Hash(), process, 0)
 				return
 			}
 		}

@@ -36,6 +36,10 @@ func (c *Container)String() string {
 	return fmt.Sprintf("{ID:%s Name:%s}", c.ID, c.Name)
 }
 
+func (c *Container)Hash() string{
+	return fmt.Sprintf("%X",c.ID)
+}
+
 // Containers is the structure that have list of Container and mutex.
 type Containers struct {
 	List    []*Container
