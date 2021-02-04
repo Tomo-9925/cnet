@@ -52,6 +52,8 @@ cmd/cnet/*.yml
 *.log
 *.gz
 !Dockerfile
+scripts/verificate_vulnerable_wordpress/*.tsv
+scripts/verificate_vulnerable_wordpress/*.csv
 
 # Visual Studio Code
 .vscode/*

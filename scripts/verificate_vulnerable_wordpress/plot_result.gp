@@ -12,6 +12,8 @@ no_cnet_data=(ARG3 eq "" ? "./no_cnet.tsv" : ARG3)
 with_cnet_title=(ARG4 eq "" ? "with system" : ARG4)
 no_cnet_title=(ARG5 eq "" ? "no system" : ARG5)
 
+pdf_name=(ARG6 eq "" ? "output.pdf" : ARG6)
+
 set grid
 set xlabel "Packet"
 set ylabel "Time (ms)"
@@ -19,7 +21,7 @@ set xtics 1000
 set ytics 10
 set terminal pdfcairo color enhanced font "SF Mono Regular,16"
 set terminal pdfcairo size 6,4
-set output "result.pdf"
+set output pdf_name
 
 plot with_cnet_data using (column(column_num)*1000) \
                     title with_cnet_title \
