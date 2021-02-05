@@ -19,6 +19,7 @@ set xlabel "Packet"
 set ylabel "Time (ms)"
 set xtics 1000
 set ytics 10
+# set yrange [:100]
 set terminal pdfcairo color enhanced font "SF Mono Regular,16"
 set terminal pdfcairo size 6,4
 set output pdf_name
