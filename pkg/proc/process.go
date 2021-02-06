@@ -80,7 +80,7 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 		argFields.WithField("error", err).Debug("failed to identify process of container")
 		return
 	}
-	suspiciousProcesses := make(map[Process] struct{})
+	suspiciousProcesses := map[Process]struct{}{}
 	for _, inode := range inodes {
 		var suspiciousProcess *Process
 		suspiciousProcess, err = SearchProcessOfContainerFromInode(container, socket, inode)
@@ -97,14 +97,9 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			return
 		}
 	}
-	switch socket.Protocol {
-	case layers.LayerTypeICMPv4, layers.LayerTypeICMPv6:
-		var identifier uint16
-		identifier, err = CheckIdentifierOfICMP(socket, packet)
-		if err != nil {
-			argFields.WithField("error", err).Trace("failed to identify process of container with identifier method")
-			break
-		}
+	var identifier uint16
+	identifier, err = CheckIdentifierOfICMP(socket, packet)
+	if err == nil {
 		identifierStr := strconv.FormatUint(uint64(identifier), 10)
 		for suspiciousProcess := range suspiciousProcesses {
 			if NSpidExists(suspiciousProcess.ID, identifierStr) {
@@ -114,9 +109,12 @@ func IdentifyProcessOfContainer(socket *Socket, container *container.Container, 
 			}
 		}
 	}
+
+	result := make([]*Process, 0, len(suspiciousProcesses))
 	for suspiciousProcess := range suspiciousProcesses {
-		argFields.WithField("suspicious_process", suspiciousProcess).Info("multiple processes detected")
+		result = append(result, &suspiciousProcess)
 	}
+	argFields.WithField("suspicious_processes", result).Warn("multiple processes detected")
 
 	err = errors.New("the process not found")
 	argFields.WithField("error", err).Debug("failed to indentify process of container")
@@ -485,7 +483,7 @@ func SocketInodeExists(pid int, inode uint64) (exist bool) {
 }
 
 // NSpidExists reports whether the process has namespace process id.
-func NSpidExists(pid int, nspidStr string) bool {
+func NSpidExists(pid int, nspidStr string) (result bool) {
 	argFields := logrus.WithFields(logrus.Fields{
 		"pid": pid,
 		"nspid": nspidStr,
@@ -496,21 +494,19 @@ func NSpidExists(pid int, nspidStr string) bool {
 	file, err := ioutil.ReadFile(filepath.Join(procPath, strconv.Itoa(pid), "status"))
 	if err != nil {
 		argFields.WithField("error", err).Debug("failed to check whether the process has nspid")
-		return false
+		return
 	}
 	rowScanner := bufio.NewScanner(strings.NewReader(*(*string)(unsafe.Pointer(&file))))
 	for rowScanner.Scan() {
 		rowText := rowScanner.Text()
 		if strings.HasPrefix(rowText, "NSpid") {
-			if strings.HasSuffix(rowText, nspidStr) {
-				return true
-			}
+			result = strings.HasSuffix(rowText, nspidStr)
 			break
 		}
 	}
 
 	argFields.WithField("error", "nspid not found").Debug("failed to check whether the process has namespace process id")
-	return false
+	return
 }
 
 // RetrieveProcessName gets the process name from stat of process filesystem.

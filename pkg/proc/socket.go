@@ -129,14 +129,15 @@ func CheckIdentifierOfICMP(socket *Socket, packet *gopacket.Packet) (identifier 
 	switch socket.Protocol {
 	case layers.LayerTypeICMPv4:
 		icmpv4, _ := (*packet).Layer(layers.LayerTypeICMPv4).(*layers.ICMPv4)
-		switch icmpv4.TypeCode {
-		case layers.ICMPv4TypeEchoRequest, layers.ICMPv4TypeEchoReply,
-		layers.ICMPv4TypeTimestampRequest, layers.ICMPv4TypeTimestampReply,
-		layers.ICMPv4TypeAddressMaskRequest, layers.ICMPv4TypeAddressMaskReply:
-			identifier = icmpv4.Id
-		default:
-			err = errors.New("identifier not found")
-		}
+		// FIXME: Limiting to ICMP types with Identifier will not work correctly.
+		// switch icmpv4.TypeCode {
+		// case layers.ICMPv4TypeEchoRequest, layers.ICMPv4TypeEchoReply,
+		// layers.ICMPv4TypeTimestampRequest, layers.ICMPv4TypeTimestampReply,
+		// layers.ICMPv4TypeAddressMaskRequest, layers.ICMPv4TypeAddressMaskReply:
+		identifier = icmpv4.Id
+		// default:
+		// 	err = errors.New("identifier not found")
+		// }
 	case layers.LayerTypeICMPv6:
 		icmpv6, _ := (*packet).Layer(layers.LayerTypeICMPv6).(*layers.ICMPv6)
 		icmpv6Type := icmpv6.NextLayerType()
