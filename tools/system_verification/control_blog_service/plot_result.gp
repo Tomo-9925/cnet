@@ -1,8 +1,7 @@
-# usage: gnuplot -c plot_data.gp [column_num filepath1 filepath2 title1 title2]
+# usage: gnuplot -c plot_data.gp [column_num file_path_1 file_path_2 title_1 title_2 pdf_name]
 #
 # Description:
-# Plots the specified lines of two time data (unit: seconds) on a graph.
-# In the script, the data will be changed to millisecond data.
+# Plots the specified lines of two time data on a graph.
 
 column_num=(ARG1 eq "" ? "3" : ARG1)+0
 

@@ -8,8 +8,6 @@ import pyperclip
 import re
 import typing
 
-Processing_time_regex = r'processing_time="([\d\.]+.s)"'
-
 def output_format_cnet_log(src_path, out_path, target_ip: str) -> None:
   max_column_num = 0
   with open(src_path, 'r') as src_file:
@@ -33,7 +31,7 @@ def output_format_cnet_log(src_path, out_path, target_ip: str) -> None:
           out_file.write(",")
         out_file.write("\n")
         column_num = 0
-      extract_time = re.search(Processing_time_regex, src_line).group(1)
+      extract_time = re.search(r'processing_time="([\d\.]+.s)"', src_line).group(1)
       writing_time = extract_time.replace('µ', 'u')
       out_file.write('"{}",'.format(writing_time))
       column_num += 1
@@ -48,22 +46,19 @@ def get_dataframe(out_path: str) -> pd.DataFrame:
 def print_describes(df: pd.DataFrame) -> None:
   first_times = df.iloc[:, 0].dropna()
   first_time_describe = first_times.describe()
-  # print("first packet time:\n", first_times.describe())
 
   the_others_times = df.iloc[:, 1].dropna()
   for column_name in df.iloc[:, 2:]:
     s = df[column_name].dropna()
     the_others_times = pd.concat([the_others_times, s])
   the_others_time_describe = the_others_times.describe()
-  # print("the others time:\n", the_others_times.describe())
 
   all_times = pd.concat([first_times, the_others_times])
   all_time_describe = all_times.describe()
-  # print("all packet time: \n", all_times.describe())
   describe_df = pd.DataFrame({'first_packets': first_time_describe, 'the_other_packets': the_others_time_describe, 'all_packets': all_time_describe})
   describe_df = describe_df.applymap(lambda x: x.microseconds/1000 if type(x) is pd.Timedelta else x)
   print(describe_df)
-  pyperclip.copy(describe_df.to_latex())  # LaTeXのテーブルをクリップボードにコピー
+  pyperclip.copy(describe_df.to_latex())
 
 if __name__ == '__main__':
   arg_parser = argparse.ArgumentParser(description='Format the cnet.log created by "measure_http_time.sh"')

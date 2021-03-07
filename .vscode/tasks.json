@@ -7,7 +7,7 @@
       "label": "Test",
       "type": "shell",
       "linux": {
-        "command": "sudo go test -v ./test/..."
+        "command": "sudo go test -v ./..."
       },
       "group": {
         "kind": "test",
