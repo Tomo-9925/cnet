@@ -4,7 +4,7 @@
 usage: ./measure_http_time [url n]
 
 Description:
-Use the curl command to display the time and status of communication.
+This script uses curl to display the time and status of communication.
 COMMENTOUT
 
 url=${1:-"http://10.1.123.5:8080"}

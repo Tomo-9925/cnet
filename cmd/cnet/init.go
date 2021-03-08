@@ -47,6 +47,7 @@ func init() {
 		logrus.SetFormatter(&logrus.TextFormatter{
 			DisableColors: true,
 			FullTimestamp: true,
+			ForceQuote: true,
 		})
 		logFile, err = os.OpenFile(logFilePath,
 			os.O_CREATE|os.O_WRONLY|os.O_APPEND,

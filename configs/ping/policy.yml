@@ -4,6 +4,6 @@ policies:
     communications:
       - processes:
           - path: "/usr/bin/ping"
-          - path: "/usr/sbin/ping"
         sockets:
           - protocol: "icmpv4"
+            remote_ip: 10.1.3.10

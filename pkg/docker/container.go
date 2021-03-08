@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"github.com/docker/docker/api/types"
@@ -11,6 +12,10 @@ import (
 )
 
 type Containers basedContainer.Containers
+
+func (c *Containers)String() string {
+	return fmt.Sprint(c.List)
+}
 
 func fetchContainerInspection(cid string) (container *basedContainer.Container, err error) {
 	cidField := logrus.WithField("container_id", cid)
