@@ -1,0 +1,15 @@
+# 正常系テスト ポリシーに記載のないコンテナは通信ができないこと
+# docker run -it -d -p 8081:80 --name nginx_test_invalid
+# (local)> curl {serverIP}:8081
+
+policies:
+  - container:
+      name: "nginx_test"
+    communications:
+      - processes:
+          - path: "/usr/sbin/nginx"
+        sockets:
+          - protocol: "tcp"
+            local_port: 80
+          - protocol: "tcp"
+            local_port: 443
